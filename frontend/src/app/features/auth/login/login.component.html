@@ -1,0 +1,74 @@
+<section class="onboard">
+  <h1 class="onboard__title">{{ mode() === 'login' ? 'Sign in' : 'Create your account' }}</h1>
+  <p class="onboard__subtitle">
+    {{ mode() === 'login' ? 'Welcome back to TaskFlow.' : 'Takes a minute — you\'ll be signed in right away.' }}
+  </p>
+
+  <div class="mode-switch">
+    <button
+      type="button"
+      class="mode-switch__tab"
+      [class.mode-switch__tab--active]="mode() === 'login'"
+      (click)="switchMode('login')"
+    >
+      Sign in
+    </button>
+    <button
+      type="button"
+      class="mode-switch__tab"
+      [class.mode-switch__tab--active]="mode() === 'register'"
+      (click)="switchMode('register')"
+    >
+      Register
+    </button>
+  </div>
+
+  <form class="onboard__form" (ngSubmit)="submit()">
+    <label class="field">
+      <span class="field__label">Email</span>
+      <input
+        class="field__input"
+        type="email"
+        name="email"
+        [(ngModel)]="email"
+        placeholder="you@example.com"
+        required
+      />
+    </label>
+
+    @if (mode() === 'register') {
+      <label class="field">
+        <span class="field__label">Display name</span>
+        <input
+          class="field__input"
+          type="text"
+          name="displayName"
+          [(ngModel)]="displayName"
+          placeholder="Ada Lovelace"
+          required
+        />
+      </label>
+    }
+
+    <label class="field">
+      <span class="field__label">Password</span>
+      <input
+        class="field__input"
+        type="password"
+        name="password"
+        [(ngModel)]="password"
+        placeholder="At least 8 characters"
+        minlength="8"
+        required
+      />
+    </label>
+
+    @if (errorMessage()) {
+      <p class="form-error">{{ errorMessage() }}</p>
+    }
+
+    <button class="btn btn--primary" type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Please wait…' : mode() === 'login' ? 'Sign in' : 'Create account' }}
+    </button>
+  </form>
+</section>

@@ -7,13 +7,15 @@ namespace TaskFlow.UnitTests.Domain;
 public class UserTests
 {
     [Theory]
-    [InlineData("", "Alice")]
-    [InlineData("not-an-email", "Alice")]
-    [InlineData("alice@example.com", "")]
-    [InlineData("alice@example.com", "   ")]
-    public void Create_WithInvalidInput_ReturnsFailure(string email, string displayName)
+    [InlineData("", "Alice", "hash")]
+    [InlineData("not-an-email", "Alice", "hash")]
+    [InlineData("alice@example.com", "", "hash")]
+    [InlineData("alice@example.com", "   ", "hash")]
+    [InlineData("alice@example.com", "Alice", "")]
+    [InlineData("alice@example.com", "Alice", "   ")]
+    public void Create_WithInvalidInput_ReturnsFailure(string email, string displayName, string passwordHash)
     {
-        var result = User.Create(email, displayName);
+        var result = User.Create(email, displayName, passwordHash);
 
         result.IsSuccess.Should().BeFalse();
     }
@@ -21,7 +23,7 @@ public class UserTests
     [Fact]
     public void Create_WithValidInput_NormalizesEmailToLowerCase()
     {
-        var result = User.Create("Alice.Smith@Example.COM", "Alice Smith");
+        var result = User.Create("Alice.Smith@Example.COM", "Alice Smith", "hash");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Email.Should().Be("alice.smith@example.com");

@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Tasks;
 using TaskFlow.Application.Tasks.Commands.AssignTask;
@@ -11,6 +12,7 @@ namespace TaskFlow.Api.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public sealed class TasksController(ISender sender) : ControllerBase
 {
     /// <summary>Lists every task on a board, sorted by priority then due date.</summary>

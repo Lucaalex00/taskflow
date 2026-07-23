@@ -2,44 +2,61 @@ import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { CreateUserRequest } from '../models/user.model';
+import { AuthResult, CreateUserRequest, LoginRequest } from '../models/user.model';
 
-const STORAGE_KEY = 'taskflow.currentUserId';
+const STORAGE_KEY_TOKEN = 'taskflow.authToken';
+const STORAGE_KEY_USER_ID = 'taskflow.currentUserId';
 const STORAGE_KEY_NAME = 'taskflow.currentUserName';
 
 /**
- * Demo-scope identity: no real authentication is in the project brief, so this
- * simply persists a generated user id in memory + localStorage so the same
- * "person" is reused across page reloads during a demo session.
+ * Holds the signed-in user's identity and JWT. The token is attached to outgoing requests
+ * by authInterceptor (see core/interceptors/auth.interceptor.ts) and read back by authGuard
+ * to gate routes.
  */
 @Injectable({ providedIn: 'root' })
 export class CurrentUserService {
-  private readonly userIdSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY));
+  private readonly tokenSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_TOKEN));
+  private readonly userIdSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_USER_ID));
   private readonly userNameSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_NAME));
 
+  readonly token = computed(() => this.tokenSignal());
   readonly userId = computed(() => this.userIdSignal());
   readonly displayName = computed(() => this.userNameSignal());
-  readonly isRegistered = computed(() => this.userIdSignal() !== null);
+  readonly isAuthenticated = computed(() => this.tokenSignal() !== null);
 
   constructor(private readonly http: HttpClient) {}
 
-  async register(request: CreateUserRequest): Promise<string> {
-    const userId = await firstValueFrom(
-      this.http.post<string>(`${environment.apiUrl}/users`, request)
+  async register(request: CreateUserRequest): Promise<void> {
+    const result = await firstValueFrom(
+      this.http.post<AuthResult>(`${environment.apiUrl}/users`, request)
     );
 
-    localStorage.setItem(STORAGE_KEY, userId);
-    localStorage.setItem(STORAGE_KEY_NAME, request.displayName);
-    this.userIdSignal.set(userId);
-    this.userNameSignal.set(request.displayName);
+    this.applyAuthResult(result);
+  }
 
-    return userId;
+  async login(request: LoginRequest): Promise<void> {
+    const result = await firstValueFrom(
+      this.http.post<AuthResult>(`${environment.apiUrl}/auth/login`, request)
+    );
+
+    this.applyAuthResult(result);
   }
 
   signOut(): void {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_TOKEN);
+    localStorage.removeItem(STORAGE_KEY_USER_ID);
     localStorage.removeItem(STORAGE_KEY_NAME);
+    this.tokenSignal.set(null);
     this.userIdSignal.set(null);
     this.userNameSignal.set(null);
+  }
+
+  private applyAuthResult(result: AuthResult): void {
+    localStorage.setItem(STORAGE_KEY_TOKEN, result.token);
+    localStorage.setItem(STORAGE_KEY_USER_ID, result.userId);
+    localStorage.setItem(STORAGE_KEY_NAME, result.displayName);
+    this.tokenSignal.set(result.token);
+    this.userIdSignal.set(result.userId);
+    this.userNameSignal.set(result.displayName);
   }
 }

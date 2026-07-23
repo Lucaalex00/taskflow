@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Users;
 using TaskFlow.Application.Users.Commands.CreateUser;
@@ -8,6 +9,7 @@ namespace TaskFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/users")]
+[Authorize]
 public sealed class UsersController(ISender sender) : ControllerBase
 {
     /// <summary>Lists every registered user, so the UI can offer "assign to..." choices.</summary>
@@ -19,13 +21,14 @@ public sealed class UsersController(ISender sender) : ControllerBase
         return Ok(users);
     }
 
-    /// <summary>Registers a new user.</summary>
+    /// <summary>Registers a new user and logs them in immediately, returning a JWT.</summary>
     [HttpPost]
-    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResult), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(CreateUserCommand command, CancellationToken cancellationToken)
     {
-        var userId = await sender.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(Create), new { id = userId }, userId);
+        var result = await sender.Send(command, cancellationToken);
+        return CreatedAtAction(nameof(GetAll), null, result);
     }
 }

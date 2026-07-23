@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -6,6 +7,7 @@ using FluentAssertions;
 using TaskFlow.Api.Controllers;
 using TaskFlow.Application.Boards;
 using TaskFlow.Application.Tasks;
+using TaskFlow.Application.Users;
 using TaskFlow.Domain.Enums;
 using Xunit;
 
@@ -24,14 +26,29 @@ public class TasksEndpointsTests(TaskFlowApiFactory factory) : IClassFixture<Tas
         PropertyNameCaseInsensitive = true
     };
 
+    /// <summary>Registers a fresh user and attaches its JWT to _client for subsequent calls —
+    /// every board/task/alert endpoint requires authentication.</summary>
+    private async Task<Guid> RegisterAndAuthenticateAsync(string displayName)
+    {
+        var response = await _client.PostAsJsonAsync("/api/users", new
+        {
+            Email = $"{Guid.NewGuid()}@example.com",
+            DisplayName = displayName,
+            Password = "correct-horse-battery-staple"
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var auth = await response.Content.ReadFromJsonAsync<AuthResult>(JsonOptions);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+
+        return auth.UserId;
+    }
+
     [Fact]
     public async Task FullFlow_CreateUserBoardAndTask_ThenTransitionState_Succeeds()
     {
         // Arrange: a user and a board are prerequisites for creating a task.
-        var userResponse = await _client.PostAsJsonAsync("/api/users",
-            new { Email = $"{Guid.NewGuid()}@example.com", DisplayName = "Integration Tester" });
-        userResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var userId = await userResponse.Content.ReadFromJsonAsync<Guid>();
+        var userId = await RegisterAndAuthenticateAsync("Integration Tester");
 
         var boardResponse = await _client.PostAsJsonAsync("/api/boards",
             new { Name = "Integration Board", OwnerId = userId });
@@ -62,6 +79,8 @@ public class TasksEndpointsTests(TaskFlowApiFactory factory) : IClassFixture<Tas
     [Fact]
     public async Task CreateTask_OnNonExistentBoard_Returns404WithProblemDetails()
     {
+        await RegisterAndAuthenticateAsync("Orphan Task Tester");
+
         var response = await _client.PostAsJsonAsync($"/api/boards/{Guid.NewGuid()}/tasks",
             new CreateTaskRequest("Orphan", null, TaskPriority.Low, null), JsonOptions);
 
@@ -72,9 +91,7 @@ public class TasksEndpointsTests(TaskFlowApiFactory factory) : IClassFixture<Tas
     [Fact]
     public async Task CreateTask_WithEmptyTitle_Returns400WithValidationErrors()
     {
-        var userResponse = await _client.PostAsJsonAsync("/api/users",
-            new { Email = $"{Guid.NewGuid()}@example.com", DisplayName = "Validator" });
-        var userId = await userResponse.Content.ReadFromJsonAsync<Guid>();
+        var userId = await RegisterAndAuthenticateAsync("Validator");
 
         var boardResponse = await _client.PostAsJsonAsync("/api/boards",
             new { Name = "Validation Board", OwnerId = userId });
@@ -84,5 +101,13 @@ public class TasksEndpointsTests(TaskFlowApiFactory factory) : IClassFixture<Tas
             new CreateTaskRequest("", null, TaskPriority.Low, null), JsonOptions);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task BoardEndpoint_WithoutAuthentication_Returns401()
+    {
+        var response = await _client.GetAsync("/api/boards");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

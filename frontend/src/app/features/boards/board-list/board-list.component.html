@@ -1,50 +1,11 @@
-@if (!currentUser.isRegistered()) {
-  <section class="onboard">
-    <h1 class="onboard__title">Set up your profile</h1>
-    <p class="onboard__subtitle">One-time step for this demo — no password, just a name to attach to your work.</p>
+<section class="boards">
+  <div class="boards__header">
+    <div>
+      <h1 class="boards__title">Boards</h1>
+      <p class="boards__subtitle mono">signed in as {{ currentUser.displayName() }}</p>
+    </div>
 
-    <form class="onboard__form" (ngSubmit)="register()">
-      <label class="field">
-        <span class="field__label">Email</span>
-        <input
-          class="field__input"
-          type="email"
-          name="email"
-          [(ngModel)]="registerEmail"
-          placeholder="you@example.com"
-          required
-        />
-      </label>
-
-      <label class="field">
-        <span class="field__label">Display name</span>
-        <input
-          class="field__input"
-          type="text"
-          name="displayName"
-          [(ngModel)]="registerDisplayName"
-          placeholder="Ada Lovelace"
-          required
-        />
-      </label>
-
-      @if (errorMessage()) {
-        <p class="form-error">{{ errorMessage() }}</p>
-      }
-
-      <button class="btn btn--primary" type="submit" [disabled]="isRegistering()">
-        {{ isRegistering() ? 'Setting up…' : 'Continue' }}
-      </button>
-    </form>
-  </section>
-} @else {
-  <section class="boards">
-    <div class="boards__header">
-      <div>
-        <h1 class="boards__title">Boards</h1>
-        <p class="boards__subtitle mono">signed in as {{ currentUser.displayName() }}</p>
-      </div>
-
+    <div class="boards__header-actions">
       <form class="new-board" (ngSubmit)="createBoard()">
         <input
           class="field__input"
@@ -58,31 +19,33 @@
           {{ isCreatingBoard() ? 'Creating…' : '+ New board' }}
         </button>
       </form>
+
+      <button class="btn btn--ghost" type="button" (click)="signOut()">Sign out</button>
     </div>
+  </div>
 
-    @if (errorMessage()) {
-      <p class="form-error">{{ errorMessage() }}</p>
-    }
+  @if (errorMessage()) {
+    <p class="form-error">{{ errorMessage() }}</p>
+  }
 
-    @if (isLoading()) {
-      <p class="mono muted">loading boards…</p>
-    } @else if (boards().length === 0) {
-      <div class="empty-state">
-        <p class="empty-state__title">No boards yet</p>
-        <p class="empty-state__subtitle">Create one above to start tracking tasks and workload.</p>
-      </div>
-    } @else {
-      <div class="board-grid">
-        @for (board of boards(); track board.id) {
-          <button class="board-card" (click)="openBoard(board.id)">
-            <span class="board-card__name">{{ board.name }}</span>
-            <span class="board-card__stat">
-              <span class="board-card__stat-value mono">{{ board.taskCount }}</span>
-              <span class="board-card__stat-label">tasks</span>
-            </span>
-          </button>
-        }
-      </div>
-    }
-  </section>
-}
+  @if (isLoading()) {
+    <p class="mono muted">loading boards…</p>
+  } @else if (boards().length === 0) {
+    <div class="empty-state">
+      <p class="empty-state__title">No boards yet</p>
+      <p class="empty-state__subtitle">Create one above to start tracking tasks and workload.</p>
+    </div>
+  } @else {
+    <div class="board-grid">
+      @for (board of boards(); track board.id) {
+        <button class="board-card" (click)="openBoard(board.id)">
+          <span class="board-card__name">{{ board.name }}</span>
+          <span class="board-card__stat">
+            <span class="board-card__stat-value mono">{{ board.taskCount }}</span>
+            <span class="board-card__stat-label">tasks</span>
+          </span>
+        </button>
+      }
+    </div>
+  }
+</section>

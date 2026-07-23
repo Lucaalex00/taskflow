@@ -24,6 +24,10 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         {
             await WriteProblemAsync(context, HttpStatusCode.NotFound, "Resource not found", ex.Message);
         }
+        catch (AuthenticationException ex)
+        {
+            await WriteProblemAsync(context, HttpStatusCode.Unauthorized, "Authentication failed", ex.Message);
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unhandled exception processing {Method} {Path}", context.Request.Method, context.Request.Path);

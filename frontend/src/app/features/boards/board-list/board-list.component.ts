@@ -18,11 +18,6 @@ export class BoardListComponent implements OnInit {
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
-  // Registration form state (shown once per browser, see CurrentUserService).
-  registerEmail = '';
-  registerDisplayName = '';
-  readonly isRegistering = signal(false);
-
   // New board form state.
   newBoardName = '';
   readonly isCreatingBoard = signal(false);
@@ -34,32 +29,7 @@ export class BoardListComponent implements OnInit {
   ) {}
 
   async ngOnInit(): Promise<void> {
-    if (this.currentUser.isRegistered()) {
-      await this.loadBoards();
-    } else {
-      this.isLoading.set(false);
-    }
-  }
-
-  async register(): Promise<void> {
-    if (!this.registerEmail.trim() || !this.registerDisplayName.trim()) {
-      return;
-    }
-
-    this.isRegistering.set(true);
-    this.errorMessage.set(null);
-
-    try {
-      await this.currentUser.register({
-        email: this.registerEmail.trim(),
-        displayName: this.registerDisplayName.trim()
-      });
-      await this.loadBoards();
-    } catch {
-      this.errorMessage.set('Could not create your profile. Check the email format and try again.');
-    } finally {
-      this.isRegistering.set(false);
-    }
+    await this.loadBoards();
   }
 
   async createBoard(): Promise<void> {
@@ -84,6 +54,11 @@ export class BoardListComponent implements OnInit {
 
   openBoard(boardId: string): void {
     this.router.navigate(['/boards', boardId]);
+  }
+
+  signOut(): void {
+    this.currentUser.signOut();
+    this.router.navigateByUrl('/login');
   }
 
   private async loadBoards(): Promise<void> {

@@ -13,8 +13,8 @@ public class GetUsersQueryHandlerTests
     {
         await using var context = new TestDbContext();
         context.Users.AddRange(
-            User.Create("zack@example.com", "Zack").Value,
-            User.Create("ada@example.com", "Ada").Value);
+            User.Create("zack@example.com", "Zack", "hash").Value,
+            User.Create("ada@example.com", "Ada", "hash").Value);
         await context.SaveChangesAsync();
 
         var handler = new GetUsersQueryHandler(context);

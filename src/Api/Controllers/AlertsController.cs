@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.AlertRules.Commands.CreateAlertRule;
 using TaskFlow.Application.Alerts;
@@ -10,6 +11,7 @@ namespace TaskFlow.Api.Controllers;
 
 [ApiController]
 [Route("api")]
+[Authorize]
 public sealed class AlertsController(ISender sender) : ControllerBase
 {
     /// <summary>Lists alerts raised for a board (optionally only the unread ones).</summary>

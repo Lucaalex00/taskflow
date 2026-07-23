@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Boards;
 using TaskFlow.Application.Boards.Commands.CreateBoard;
@@ -8,6 +9,7 @@ namespace TaskFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/boards")]
+[Authorize]
 public sealed class BoardsController(ISender sender) : ControllerBase
 {
     /// <summary>Lists every board with its current task count.</summary>
