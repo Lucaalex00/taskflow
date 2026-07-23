@@ -110,6 +110,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR (like all Docker registries) requires lowercase image references, but
+      # github.repository preserves the owner's display case (e.g. "Lucaalex00/taskflow"),
+      # which docker/build-push-action rejects with "invalid reference format".
+      - name: Compute lowercase image name
+        id: image
+        run: echo "repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Build & push API image
         uses: docker/build-push-action@v6
         with:
@@ -117,8 +124,8 @@ jobs:
           file: Dockerfile.api
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api:latest
-            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+            ghcr.io/${{ steps.image.outputs.repository }}/api:latest
+            ghcr.io/${{ steps.image.outputs.repository }}/api:${{ github.sha }}
 
       - name: Build & push frontend image
         uses: docker/build-push-action@v6
@@ -127,5 +134,5 @@ jobs:
           file: Dockerfile.frontend
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/frontend:latest
-            ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+            ghcr.io/${{ steps.image.outputs.repository }}/frontend:latest
+            ghcr.io/${{ steps.image.outputs.repository }}/frontend:${{ github.sha }}
