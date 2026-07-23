@@ -210,5 +210,6 @@ docker compose logs api -f     # tail API logs (Serilog output)
 
 - Real authentication (`CurrentUserService` is demo-scope, no password/JWT)
 - Dispatching `TaskCompletedEvent` to actual subscribers (the event is raised but not yet consumed by anything - infrastructure for this exists but no handler is registered)
-- Frontend unit tests for components/services (only the CLI-generated `app.component.spec.ts` exists today)
 - Assigning tasks to a specific user other than "self" from the UI (the API supports it; the UI only exposes "assign to me")
+
+See [`docs/2026-07-23-frontend-tests-and-ci-fixes.md`](docs/2026-07-23-frontend-tests-and-ci-fixes.md) for the frontend unit test suite added (previously missing) and two real bugs it uncovered in CI.

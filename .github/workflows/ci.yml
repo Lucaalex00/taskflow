@@ -81,7 +81,7 @@ jobs:
 
       - name: Lint
         working-directory: frontend
-        run: npx ng lint || true # non-blocking until a lint config is added
+        run: npx ng lint
 
       - name: Unit tests (headless)
         working-directory: frontend

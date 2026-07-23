@@ -36,7 +36,6 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         HttpContext context, HttpStatusCode statusCode, string title, string detail,
         IDictionary<string, string[]>? errors = null)
     {
-        context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = (int)statusCode;
 
         var problemDetails = new ProblemDetails
@@ -50,6 +49,6 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         if (errors is not null)
             problemDetails.Extensions["errors"] = errors;
 
-        await context.Response.WriteAsJsonAsync(problemDetails);
+        await context.Response.WriteAsJsonAsync(problemDetails, options: null, contentType: "application/problem+json");
     }
 }
