@@ -1,0 +1,142 @@
+<a routerLink="/" class="back-link mono">&larr; all boards</a>
+
+<div class="board-layout">
+  <section class="kanban">
+    <div class="kanban__header">
+      <h1 class="kanban__title mono">Board</h1>
+      <button class="btn btn--primary" (click)="isTaskFormOpen.set(!isTaskFormOpen())">
+        {{ isTaskFormOpen() ? 'Cancel' : '+ New task' }}
+      </button>
+    </div>
+
+    @if (isTaskFormOpen()) {
+      <form class="task-form" (ngSubmit)="createTask()">
+        <label class="field">
+          <span class="field__label">Title</span>
+          <input class="field__input" type="text" name="title" [(ngModel)]="newTaskTitle" required />
+        </label>
+
+        <label class="field">
+          <span class="field__label">Description (optional)</span>
+          <textarea class="field__textarea" name="description" [(ngModel)]="newTaskDescription"></textarea>
+        </label>
+
+        <div class="task-form__row">
+          <label class="field">
+            <span class="field__label">Priority</span>
+            <select class="field__select" name="priority" [(ngModel)]="newTaskPriority">
+              @for (p of [TaskPriority.Low, TaskPriority.Medium, TaskPriority.High, TaskPriority.Critical]; track p) {
+                <option [value]="p">{{ p }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Due date (optional)</span>
+            <input class="field__input" type="date" name="dueDate" [(ngModel)]="newTaskDueDate" />
+          </label>
+        </div>
+
+        <button class="btn btn--primary" type="submit" [disabled]="isCreatingTask()">
+          {{ isCreatingTask() ? 'Creating…' : 'Create task' }}
+        </button>
+      </form>
+    }
+
+    @if (errorMessage()) {
+      <p class="form-error">{{ errorMessage() }}</p>
+    }
+
+    @if (isLoading()) {
+      <p class="mono muted">loading tasks…</p>
+    } @else {
+      <div class="kanban__columns">
+        @for (column of columns; track column) {
+          <div class="column">
+            <div class="column__header">
+              <span class="column__label mono">{{ columnLabels[column] }}</span>
+              <span class="column__count mono">{{ tasksByColumn().get(column)?.length ?? 0 }}</span>
+            </div>
+
+            <div class="column__body">
+              @for (task of tasksByColumn().get(column); track task.id) {
+                <div class="task-card" [class.task-card--overdue]="task.isOverdue">
+                  <div class="task-card__top">
+                    <span class="priority-tag" [attr.data-priority]="task.priority">{{ task.priority }}</span>
+                    @if (task.isOverdue) {
+                      <span class="overdue-tag mono">overdue</span>
+                    }
+                  </div>
+
+                  <p class="task-card__title">{{ task.title }}</p>
+
+                  @if (task.description) {
+                    <p class="task-card__description">{{ task.description }}</p>
+                  }
+
+                  @if (task.dueAtUtc) {
+                    <p class="task-card__due mono">due {{ task.dueAtUtc | date: 'MMM d' }}</p>
+                  }
+
+                  <div class="task-card__actions">
+                    @if (!task.assigneeId) {
+                      <button class="btn btn--ghost" (click)="assignToSelf(task)">Assign to me</button>
+                    }
+
+                    @for (nextState of transitionsFor(task); track nextState) {
+                      <button class="btn btn--ghost" (click)="moveTask(task, nextState)">
+                        &rarr; {{ columnLabels[nextState] }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              } @empty {
+                <p class="column__empty mono muted">—</p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (cancelledCount() > 0) {
+        <p class="cancelled-note mono muted">{{ cancelledCount() }} cancelled task(s) hidden</p>
+      }
+    }
+  </section>
+
+  <aside class="alert-console">
+    <div class="alert-console__header">
+      <span class="alert-console__title mono">alerts</span>
+      <span
+        class="connection-dot"
+        [class.connection-dot--live]="alertService.connectionState() === 'Connected'"
+        [title]="alertService.connectionState()"
+      ></span>
+    </div>
+
+    @if (alertService.alerts().length === 0) {
+      <p class="alert-console__empty mono muted">no anomalies detected yet</p>
+    } @else {
+      <div class="alert-list">
+        @for (alert of alertService.alerts(); track alert.id) {
+          <div
+            class="alert-item"
+            [attr.data-severity]="alert.severity"
+            [class.alert-item--read]="alert.isRead"
+          >
+            <div class="alert-item__meta mono">
+              <span>{{ alert.severity }}</span>
+              <span>{{ alert.createdAtUtc | date: 'HH:mm:ss' }}</span>
+            </div>
+            <p class="alert-item__message">{{ alert.message }}</p>
+            @if (!alert.isRead) {
+              <button class="btn btn--ghost alert-item__ack" (click)="markAlertRead(alert.id)">
+                Mark as read
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </aside>
+</div>

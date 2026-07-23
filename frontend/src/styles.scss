@@ -1,0 +1,186 @@
+/*
+ * Design direction: "workload console" — TaskFlow's core feature is anomaly
+ * detection on team load, so the UI leans into a monitoring-console aesthetic
+ * (dark graphite surface, monospace data readouts, a live-signal accent)
+ * rather than a generic SaaS light theme.
+ */
+
+:root {
+  /* Color */
+  --color-bg: #14171c;
+  --color-surface: #1b1f26;
+  --color-surface-raised: #232830;
+  --color-border: #2c323c;
+  --color-text: #e8eaed;
+  --color-text-muted: #8a8f98;
+  --color-accent: #4fd1c5;
+  --color-accent-dim: rgba(79, 209, 197, 0.14);
+  --color-warning: #e8a33d;
+  --color-warning-dim: rgba(232, 163, 61, 0.14);
+  --color-critical: #e8544f;
+  --color-critical-dim: rgba(232, 84, 79, 0.14);
+  --color-info: #6b9fe8;
+
+  /* Type */
+  --font-display: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Layout */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .mono {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* --- Shared component primitives (used across feature components) --- */
+
+.mono {
+  font-family: var(--font-display);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field__input,
+.field__select,
+.field__textarea {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  transition: border-color 0.15s ease;
+}
+
+.field__input:focus,
+.field__select:focus,
+.field__textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.field__textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0b1210;
+  font-weight: 600;
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  border-color: var(--color-accent);
+}
+
+.btn--ghost {
+  background: transparent;
+}
+
+.form-error {
+  color: var(--color-critical);
+  font-size: 13px;
+  margin: 0;
+}
+
+.empty-state {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.empty-state__title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.empty-state__subtitle {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: 13px;
+}

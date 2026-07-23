@@ -1,0 +1,26 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+.vs/
+*.suo
+
+# --- Angular / Node ---
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+npm-debug.log*
+
+# --- Docker / OS ---
+.env
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# --- Test results ---
+TestResults/
+coverage/
