@@ -2,6 +2,7 @@ export interface BoardDto {
   id: string;
   name: string;
   ownerId: string;
+  ownerDisplayName: string;
   color: string;
   taskCount: number;
   createdAtUtc: string;

@@ -8,9 +8,11 @@
         <button class="btn btn--ghost" (click)="isMembersOpen.set(!isMembersOpen())">
           {{ isMembersOpen() ? 'Hide members' : 'Members (' + members().length + ')' }}
         </button>
-        <button class="btn btn--primary" (click)="isTaskFormOpen.set(!isTaskFormOpen())">
-          {{ isTaskFormOpen() ? 'Cancel' : '+ New task' }}
-        </button>
+        @if (isOwner()) {
+          <button class="btn btn--primary" (click)="isTaskFormOpen.set(!isTaskFormOpen())">
+            {{ isTaskFormOpen() ? 'Cancel' : '+ New task' }}
+          </button>
+        }
       </div>
     </div>
 
@@ -58,7 +60,7 @@
       </section>
     }
 
-    @if (isTaskFormOpen()) {
+    @if (isOwner() && isTaskFormOpen()) {
       <form class="task-form" (ngSubmit)="createTask()">
         <label class="field">
           <span class="field__label">Title</span>

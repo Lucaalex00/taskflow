@@ -17,7 +17,8 @@ public sealed class CreateTaskCommandHandler(ITaskFlowDbContext context, IBoardA
         if (!boardExists)
             throw new NotFoundException(nameof(ProjectBoard), request.BoardId);
 
-        await boardAuthorizer.EnsureMemberAsync(request.BoardId, cancellationToken);
+        // Only the board Owner creates work items — Members are assigned to tasks, they don't create them.
+        await boardAuthorizer.EnsureOwnerAsync(request.BoardId, cancellationToken);
 
         var result = TaskItem.Create(
             request.BoardId, request.Title, request.Description, request.Priority, request.DueAtUtc);

@@ -47,6 +47,9 @@
       @for (board of boards(); track board.id) {
         <button class="board-card" [style.border-left-color]="board.color" (click)="openBoard(board.id)">
           <span class="board-card__name">{{ board.name }}</span>
+          <span class="board-card__owner mono muted">
+            {{ isOwnBoard(board) ? 'created by you' : 'created by ' + board.ownerDisplayName }}
+          </span>
           <span class="board-card__stat">
             <span class="board-card__stat-value mono">{{ board.taskCount }}</span>
             <span class="board-card__stat-label">tasks</span>

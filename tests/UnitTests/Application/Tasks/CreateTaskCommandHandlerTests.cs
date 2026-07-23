@@ -1,5 +1,6 @@
 using FluentAssertions;
 using TaskFlow.Application.Common.Exceptions;
+using TaskFlow.Application.Common.Services;
 using TaskFlow.Application.Tasks.Commands.CreateTask;
 using TaskFlow.Domain.Entities;
 using TaskFlow.Domain.Enums;
@@ -39,5 +40,26 @@ public class CreateTaskCommandHandlerTests
         var act = async () => await handler.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Fact]
+    public async Task Handle_AsANonOwnerMember_ThrowsForbiddenException()
+    {
+        await using var context = new TestDbContext();
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var board = ProjectBoard.Create("Sprint 12", ownerId).Value;
+        context.Boards.Add(board);
+        context.BoardMembers.Add(BoardMember.Create(board.Id, ownerId, BoardRole.Owner).Value);
+        context.BoardMembers.Add(BoardMember.Create(board.Id, memberId, BoardRole.Member).Value);
+        await context.SaveChangesAsync();
+
+        var handler = new CreateTaskCommandHandler(
+            context, new BoardAuthorizer(context, new FakeCurrentUserService(memberId)));
+        var command = new CreateTaskCommand(board.Id, "Write ADRs", null, TaskPriority.High, null);
+
+        var act = async () => await handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }

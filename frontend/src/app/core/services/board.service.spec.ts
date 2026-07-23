@@ -13,6 +13,7 @@ describe('BoardService', () => {
     id: 'board-1',
     name: 'Sprint 1',
     ownerId: 'user-1',
+    ownerDisplayName: 'Ada',
     color: '#4fd1c5',
     taskCount: 3,
     createdAtUtc: '2026-01-01T00:00:00Z'
@@ -46,6 +47,16 @@ describe('BoardService', () => {
     req.flush([board]);
 
     expect(await promise).toEqual([board]);
+  });
+
+  it('refresh fetches boards and updates the shared signal', async () => {
+    const promise = service.refresh();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/boards`);
+    req.flush([board]);
+
+    await promise;
+    expect(service.boards()).toEqual([board]);
   });
 
   it('create posts the new board request and returns the created id', async () => {

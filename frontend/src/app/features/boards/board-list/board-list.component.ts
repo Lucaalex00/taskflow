@@ -16,7 +16,9 @@ const DEFAULT_BOARD_COLOR = '#4fd1c5';
   styleUrl: './board-list.component.scss'
 })
 export class BoardListComponent implements OnInit {
-  readonly boards = signal<BoardDto[]>([]);
+  /** Shared with the notification bell, so accepting a board invitation elsewhere
+   * (without leaving this page) makes the new board show up here too. */
+  readonly boards: ReturnType<typeof signal<BoardDto[]>>;
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
@@ -29,7 +31,9 @@ export class BoardListComponent implements OnInit {
     readonly currentUser: CurrentUserService,
     private readonly boardService: BoardService,
     private readonly router: Router
-  ) {}
+  ) {
+    this.boards = this.boardService.boards;
+  }
 
   async ngOnInit(): Promise<void> {
     await this.loadBoards();
@@ -59,6 +63,10 @@ export class BoardListComponent implements OnInit {
     this.router.navigate(['/boards', boardId]);
   }
 
+  isOwnBoard(board: BoardDto): boolean {
+    return board.ownerId === this.currentUser.userId();
+  }
+
   signOut(): void {
     this.currentUser.signOut();
     this.router.navigateByUrl('/login');
@@ -67,7 +75,7 @@ export class BoardListComponent implements OnInit {
   private async loadBoards(): Promise<void> {
     this.isLoading.set(true);
     try {
-      this.boards.set(await this.boardService.getAll());
+      await this.boardService.refresh();
     } catch {
       this.errorMessage.set('Could not reach the API. Is the backend running?');
     } finally {

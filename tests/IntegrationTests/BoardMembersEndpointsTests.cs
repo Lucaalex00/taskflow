@@ -190,4 +190,22 @@ public class BoardMembersEndpointsTests(TaskFlowApiFactory factory) : IClassFixt
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
+
+    [Fact]
+    public async Task Member_CannotCreateTasks()
+    {
+        var (_, _, ownerToken) = await RegisterAsync("Owner");
+        AuthenticateAs(ownerToken);
+        var boardResponse = await _client.PostAsJsonAsync("/api/boards", new { Name = "Team Board" });
+        var boardId = await boardResponse.Content.ReadFromJsonAsync<Guid>();
+
+        var (_, memberEmail, memberToken) = await RegisterAsync("Teammate");
+        AuthenticateAs(ownerToken);
+        await AddMemberViaInviteAsync(boardId, memberEmail, memberToken);
+
+        var response = await _client.PostAsJsonAsync($"/api/boards/{boardId}/tasks",
+            new { Title = "Ship it", Description = (string?)null, Priority = "Medium", DueAtUtc = (string?)null }, JsonOptions);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

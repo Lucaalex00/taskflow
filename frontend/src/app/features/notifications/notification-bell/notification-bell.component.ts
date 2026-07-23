@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NotificationService } from '../../../core/services/notification.service';
+import { BoardService } from '../../../core/services/board.service';
 import { NotificationType, InvitationStatus } from '../../../core/models/notification.model';
 
 const POLL_INTERVAL_MS = 20_000;
@@ -22,7 +23,10 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
 
   private pollHandle?: ReturnType<typeof setInterval>;
 
-  constructor(readonly notificationService: NotificationService) {}
+  constructor(
+    readonly notificationService: NotificationService,
+    private readonly boardService: BoardService
+  ) {}
 
   ngOnInit(): void {
     void this.notificationService.refresh();
@@ -45,6 +49,10 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     this.errorMessage.set(null);
     try {
       await this.notificationService.respondToInvitation(invitationId, accept);
+      if (accept) {
+        // The accepted board wasn't in the list before — refresh it wherever it's shown.
+        await this.boardService.refresh();
+      }
     } catch {
       this.errorMessage.set('Could not respond to this invitation.');
     }

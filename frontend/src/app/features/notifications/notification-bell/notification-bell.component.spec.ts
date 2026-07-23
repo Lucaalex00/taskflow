@@ -1,6 +1,7 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { NotificationBellComponent } from './notification-bell.component';
 import { NotificationService } from '../../../core/services/notification.service';
+import { BoardService } from '../../../core/services/board.service';
 import { InvitationStatus, NotificationDto, NotificationType } from '../../../core/models/notification.model';
 import { signal } from '@angular/core';
 
@@ -11,6 +12,7 @@ describe('NotificationBellComponent', () => {
     markRead: jasmine.Spy;
     respondToInvitation: jasmine.Spy;
   };
+  let boardService: jasmine.SpyObj<BoardService>;
 
   const pendingInvitation: NotificationDto = {
     id: 'notification-1',
@@ -32,9 +34,15 @@ describe('NotificationBellComponent', () => {
       respondToInvitation: jasmine.createSpy('respondToInvitation').and.resolveTo(undefined)
     };
 
+    boardService = jasmine.createSpyObj<BoardService>('BoardService', ['refresh']);
+    boardService.refresh.and.resolveTo(undefined);
+
     TestBed.configureTestingModule({
       imports: [NotificationBellComponent],
-      providers: [{ provide: NotificationService, useValue: notificationService }]
+      providers: [
+        { provide: NotificationService, useValue: notificationService },
+        { provide: BoardService, useValue: boardService }
+      ]
     });
 
     const fixture = TestBed.createComponent(NotificationBellComponent);
@@ -83,12 +91,22 @@ describe('NotificationBellComponent', () => {
     expect(notificationService.markRead).toHaveBeenCalledWith('notification-1');
   });
 
-  it('respond accepts or declines an invitation', async () => {
+  it('respond accepts an invitation and refreshes the board list', async () => {
     const { component } = createComponent();
 
     await component.respond('invitation-1', true);
 
     expect(notificationService.respondToInvitation).toHaveBeenCalledWith('invitation-1', true);
+    expect(boardService.refresh).toHaveBeenCalled();
+  });
+
+  it('respond declines an invitation without refreshing the board list', async () => {
+    const { component } = createComponent();
+
+    await component.respond('invitation-1', false);
+
+    expect(notificationService.respondToInvitation).toHaveBeenCalledWith('invitation-1', false);
+    expect(boardService.refresh).not.toHaveBeenCalled();
   });
 
   it('respond sets an error message when it fails', async () => {
