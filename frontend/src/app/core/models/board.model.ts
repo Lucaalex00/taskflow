@@ -2,12 +2,14 @@ export interface BoardDto {
   id: string;
   name: string;
   ownerId: string;
+  color: string;
   taskCount: number;
   createdAtUtc: string;
 }
 
 export interface CreateBoardRequest {
   name: string;
+  color?: string;
 }
 
 export enum BoardRole {
@@ -19,6 +21,7 @@ export interface BoardMemberDto {
   userId: string;
   displayName: string;
   email: string;
+  color: string;
   role: BoardRole;
 }
 

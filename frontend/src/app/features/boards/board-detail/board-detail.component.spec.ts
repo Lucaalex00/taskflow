@@ -42,13 +42,15 @@ describe('BoardDetailComponent', () => {
     userId: 'user-1',
     displayName: 'Ada',
     email: 'ada@example.com',
+    color: '#4fd1c5',
     role: BoardRole.Owner
   };
 
   const otherUser: UserDto = {
     id: 'user-2',
     displayName: 'Bob',
-    email: 'bob@example.com'
+    email: 'bob@example.com',
+    color: '#f6ad55'
   };
 
   const alert: AlertDto = {
@@ -239,6 +241,17 @@ describe('BoardDetailComponent', () => {
     expect(component.assigneeName({ ...task, assigneeId: 'unknown' })).toBe('Unknown user');
   });
 
+  it('assigneeColor resolves the member color, or null when unassigned/unknown', async () => {
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([]);
+    boardService.getMembers.and.resolveTo([owner]);
+    await component.ngOnInit();
+
+    expect(component.assigneeColor(task)).toBeNull();
+    expect(component.assigneeColor({ ...task, assigneeId: 'user-1' })).toBe('#4fd1c5');
+    expect(component.assigneeColor({ ...task, assigneeId: 'unknown' })).toBeNull();
+  });
+
   it('createTask creates the task, resets the form and reloads the board', async () => {
     const { component } = createComponent();
     taskService.create.and.resolveTo('task-2');
@@ -309,7 +322,12 @@ describe('BoardDetailComponent', () => {
 
   it('addableUsers excludes users already on the board', async () => {
     const { component } = createComponent();
-    const ownerAsUser: UserDto = { id: owner.userId, displayName: owner.displayName, email: owner.email };
+    const ownerAsUser: UserDto = {
+      id: owner.userId,
+      displayName: owner.displayName,
+      email: owner.email,
+      color: owner.color
+    };
     boardService.getMembers.and.resolveTo([owner]);
     userService.getAll.and.resolveTo([ownerAsUser, otherUser]);
     taskService.getBoardTasks.and.resolveTo([]);

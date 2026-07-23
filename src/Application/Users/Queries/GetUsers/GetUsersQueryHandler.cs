@@ -12,7 +12,7 @@ public sealed class GetUsersQueryHandler(ITaskFlowDbContext context)
         return await context.Users
             .AsNoTracking()
             .OrderBy(u => u.DisplayName)
-            .Select(u => new UserDto(u.Id, u.DisplayName, u.Email))
+            .Select(u => new UserDto(u.Id, u.DisplayName, u.Email, u.Color))
             .ToListAsync(cancellationToken);
     }
 }

@@ -14,6 +14,10 @@ public class User : Entity
     /// </summary>
     public string PasswordHash { get; private set; } = null!;
 
+    /// <summary>Auto-assigned at registration (deterministic per user id) — used for avatar/initials
+    /// badges in the UI. Not user-choosable, unlike ProjectBoard's color.</summary>
+    public string Color { get; private set; } = null!;
+
     public DateTime CreatedAtUtc { get; private set; }
 
     private User() { } // EF Core
@@ -23,6 +27,7 @@ public class User : Entity
         Email = email;
         DisplayName = displayName;
         PasswordHash = passwordHash;
+        Color = ColorPalette.PickFor(Id);
         CreatedAtUtc = DateTime.UtcNow;
     }
 

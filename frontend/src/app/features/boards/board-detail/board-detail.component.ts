@@ -149,6 +149,11 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     return this.members().find((m) => m.userId === task.assigneeId)?.displayName ?? 'Unknown user';
   }
 
+  assigneeColor(task: TaskDto): string | null {
+    if (!task.assigneeId) return null;
+    return this.members().find((m) => m.userId === task.assigneeId)?.color ?? null;
+  }
+
   async createTask(): Promise<void> {
     if (!this.newTaskTitle.trim()) return;
 

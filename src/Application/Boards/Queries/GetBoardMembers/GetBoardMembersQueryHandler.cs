@@ -15,9 +15,10 @@ public sealed class GetBoardMembersQueryHandler(ITaskFlowDbContext context, IBoa
         return await context.BoardMembers
             .AsNoTracking()
             .Where(m => m.BoardId == request.BoardId)
-            .Join(context.Users, m => m.UserId, u => u.Id, (m, u) => new { m.Role, u.Id, u.DisplayName, u.Email })
+            .Join(context.Users, m => m.UserId, u => u.Id,
+                (m, u) => new { m.Role, u.Id, u.DisplayName, u.Email, u.Color })
             .OrderBy(x => x.DisplayName)
-            .Select(x => new BoardMemberDto(x.Id, x.DisplayName, x.Email, x.Role))
+            .Select(x => new BoardMemberDto(x.Id, x.DisplayName, x.Email, x.Color, x.Role))
             .ToListAsync(cancellationToken);
     }
 }

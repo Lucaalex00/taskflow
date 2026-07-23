@@ -24,4 +24,15 @@ public class CreateBoardCommandHandlerTests
         membership.UserId.Should().Be(userId);
         membership.Role.Should().Be(BoardRole.Owner);
     }
+
+    [Fact]
+    public async Task Handle_WithAChosenColor_UsesIt()
+    {
+        await using var context = new TestDbContext();
+        var handler = new CreateBoardCommandHandler(context, new FakeCurrentUserService(Guid.NewGuid()));
+
+        var boardId = await handler.Handle(new CreateBoardCommand("Sprint 1", "#63b3ed"), CancellationToken.None);
+
+        (await context.Boards.FindAsync(boardId))!.Color.Should().Be("#63b3ed");
+    }
 }

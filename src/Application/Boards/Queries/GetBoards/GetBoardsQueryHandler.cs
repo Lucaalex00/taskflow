@@ -16,7 +16,7 @@ public sealed class GetBoardsQueryHandler(ITaskFlowDbContext context, ICurrentUs
         return await context.Boards
             .AsNoTracking()
             .Where(b => memberBoardIds.Contains(b.Id))
-            .Select(b => new BoardDto(b.Id, b.Name, b.OwnerId, b.Tasks.Count, b.CreatedAtUtc))
+            .Select(b => new BoardDto(b.Id, b.Name, b.OwnerId, b.Color, b.Tasks.Count, b.CreatedAtUtc))
             .ToListAsync(cancellationToken);
     }
 }

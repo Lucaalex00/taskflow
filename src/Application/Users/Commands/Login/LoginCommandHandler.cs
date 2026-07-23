@@ -20,6 +20,6 @@ public sealed class LoginCommandHandler(
         if (!passwordHasher.Verify(user.PasswordHash, request.Password))
             throw new AuthenticationException(InvalidCredentialsMessage);
 
-        return new AuthResult(user.Id, user.DisplayName, tokenGenerator.GenerateToken(user));
+        return new AuthResult(user.Id, user.DisplayName, user.Color, tokenGenerator.GenerateToken(user));
     }
 }

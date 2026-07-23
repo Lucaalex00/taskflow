@@ -19,6 +19,7 @@
         <ul class="member-list">
           @for (member of members(); track member.userId) {
             <li class="member-list__item">
+              <span class="color-dot" [style.background]="member.color"></span>
               <span class="member-list__name">{{ member.displayName }}</span>
               <span class="member-list__role mono">{{ member.role }}</span>
               @if (isOwner()) {
@@ -121,6 +122,9 @@
 
                   <label class="assignee-select">
                     <span class="field__label">
+                      @if (assigneeColor(task)) {
+                        <span class="color-dot" [style.background]="assigneeColor(task)"></span>
+                      }
                       {{ assigneeName(task) ? 'Assigned to ' + assigneeName(task) : 'Unassigned' }}
                     </span>
                     <select

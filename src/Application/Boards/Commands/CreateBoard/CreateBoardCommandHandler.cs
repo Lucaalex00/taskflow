@@ -10,7 +10,7 @@ public sealed class CreateBoardCommandHandler(ITaskFlowDbContext context, ICurre
 {
     public async Task<Guid> Handle(CreateBoardCommand request, CancellationToken cancellationToken)
     {
-        var result = ProjectBoard.Create(request.Name, currentUser.UserId);
+        var result = ProjectBoard.Create(request.Name, currentUser.UserId, request.Color);
 
         if (!result.IsSuccess)
             throw new Common.Exceptions.ValidationException(

@@ -13,6 +13,7 @@ describe('BoardService', () => {
     id: 'board-1',
     name: 'Sprint 1',
     ownerId: 'user-1',
+    color: '#4fd1c5',
     taskCount: 3,
     createdAtUtc: '2026-01-01T00:00:00Z'
   };
@@ -21,6 +22,7 @@ describe('BoardService', () => {
     userId: 'user-1',
     displayName: 'Ada',
     email: 'ada@example.com',
+    color: '#4fd1c5',
     role: BoardRole.Owner
   };
 

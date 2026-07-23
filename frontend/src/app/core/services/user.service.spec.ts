@@ -12,7 +12,8 @@ describe('UserService', () => {
   const user: UserDto = {
     id: 'user-1',
     displayName: 'Ada',
-    email: 'ada@example.com'
+    email: 'ada@example.com',
+    color: '#4fd1c5'
   };
 
   beforeEach(() => {

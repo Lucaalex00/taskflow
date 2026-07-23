@@ -14,6 +14,7 @@ describe('BoardListComponent', () => {
     id: 'board-1',
     name: 'Sprint 1',
     ownerId: 'user-1',
+    color: '#4fd1c5',
     taskCount: 2,
     createdAtUtc: '2026-01-01T00:00:00Z'
   };
@@ -67,10 +68,11 @@ describe('BoardListComponent', () => {
     boardService.create.and.resolveTo('board-2');
     boardService.getAll.and.resolveTo([board]);
     component.newBoardName = 'Sprint 2';
+    component.newBoardColor = '#63b3ed';
 
     await component.createBoard();
 
-    expect(boardService.create).toHaveBeenCalledWith({ name: 'Sprint 2' });
+    expect(boardService.create).toHaveBeenCalledWith({ name: 'Sprint 2', color: '#63b3ed' });
     expect(component.newBoardName).toBe('');
     expect(boardService.getAll).toHaveBeenCalled();
   });

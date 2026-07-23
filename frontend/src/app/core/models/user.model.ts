@@ -12,6 +12,7 @@ export interface LoginRequest {
 export interface AuthResult {
   userId: string;
   displayName: string;
+  color: string;
   token: string;
 }
 
@@ -19,4 +20,5 @@ export interface UserDto {
   id: string;
   displayName: string;
   email: string;
+  color: string;
 }

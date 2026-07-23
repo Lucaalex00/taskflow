@@ -14,6 +14,7 @@ public class ProjectBoardConfiguration : IEntityTypeConfiguration<ProjectBoard>
 
         builder.Property(b => b.Name).HasMaxLength(100).IsRequired();
         builder.Property(b => b.OwnerId).IsRequired();
+        builder.Property(b => b.Color).HasMaxLength(7).IsRequired();
         builder.Property(b => b.CreatedAtUtc).IsRequired();
 
         // Tasks collection is backed by a private field (encapsulation) — EF Core

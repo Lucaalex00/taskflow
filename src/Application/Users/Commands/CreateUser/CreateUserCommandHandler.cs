@@ -30,6 +30,7 @@ public sealed class CreateUserCommandHandler(
         context.Users.Add(result.Value);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new AuthResult(result.Value.Id, result.Value.DisplayName, tokenGenerator.GenerateToken(result.Value));
+        return new AuthResult(
+            result.Value.Id, result.Value.DisplayName, result.Value.Color, tokenGenerator.GenerateToken(result.Value));
     }
 }

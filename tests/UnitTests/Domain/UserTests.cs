@@ -1,4 +1,5 @@
 using FluentAssertions;
+using TaskFlow.Domain.Common;
 using TaskFlow.Domain.Entities;
 using Xunit;
 
@@ -27,5 +28,14 @@ public class UserTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Email.Should().Be("alice.smith@example.com");
+    }
+
+    [Fact]
+    public void Create_AssignsAColorFromThePalette()
+    {
+        var result = User.Create("alice@example.com", "Alice", "hash");
+
+        result.IsSuccess.Should().BeTrue();
+        ColorPalette.Colors.Should().Contain(result.Value.Color);
     }
 }

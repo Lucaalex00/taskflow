@@ -15,6 +15,18 @@
           placeholder="New board name"
           required
         />
+        <div class="color-swatches">
+          @for (color of colorPalette; track color) {
+            <button
+              type="button"
+              class="color-swatch"
+              [class.color-swatch--selected]="newBoardColor === color"
+              [style.background]="color"
+              [attr.aria-label]="'Color ' + color"
+              (click)="newBoardColor = color"
+            ></button>
+          }
+        </div>
         <button class="btn btn--primary" type="submit" [disabled]="isCreatingBoard()">
           {{ isCreatingBoard() ? 'Creating…' : '+ New board' }}
         </button>
@@ -38,7 +50,7 @@
   } @else {
     <div class="board-grid">
       @for (board of boards(); track board.id) {
-        <button class="board-card" (click)="openBoard(board.id)">
+        <button class="board-card" [style.border-left-color]="board.color" (click)="openBoard(board.id)">
           <span class="board-card__name">{{ board.name }}</span>
           <span class="board-card__stat">
             <span class="board-card__stat-value mono">{{ board.taskCount }}</span>

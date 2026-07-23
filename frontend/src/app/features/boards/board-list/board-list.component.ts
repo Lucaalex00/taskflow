@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { BoardService } from '../../../core/services/board.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 import { BoardDto } from '../../../core/models/board.model';
+import { COLOR_PALETTE } from '../../../core/constants/color-palette';
 
 @Component({
   selector: 'app-board-list',
@@ -17,9 +18,11 @@ export class BoardListComponent implements OnInit {
   readonly boards = signal<BoardDto[]>([]);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
+  readonly colorPalette = COLOR_PALETTE;
 
   // New board form state.
   newBoardName = '';
+  newBoardColor: string = COLOR_PALETTE[0];
   readonly isCreatingBoard = signal(false);
 
   constructor(
@@ -41,8 +44,9 @@ export class BoardListComponent implements OnInit {
     this.errorMessage.set(null);
 
     try {
-      await this.boardService.create({ name: this.newBoardName.trim() });
+      await this.boardService.create({ name: this.newBoardName.trim(), color: this.newBoardColor });
       this.newBoardName = '';
+      this.newBoardColor = COLOR_PALETTE[0];
       await this.loadBoards();
     } catch {
       this.errorMessage.set('Could not create the board. Try a different name.');

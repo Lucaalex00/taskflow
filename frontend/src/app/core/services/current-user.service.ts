@@ -7,6 +7,7 @@ import { AuthResult, CreateUserRequest, LoginRequest } from '../models/user.mode
 const STORAGE_KEY_TOKEN = 'taskflow.authToken';
 const STORAGE_KEY_USER_ID = 'taskflow.currentUserId';
 const STORAGE_KEY_NAME = 'taskflow.currentUserName';
+const STORAGE_KEY_COLOR = 'taskflow.currentUserColor';
 
 /**
  * Holds the signed-in user's identity and JWT. The token is attached to outgoing requests
@@ -18,10 +19,12 @@ export class CurrentUserService {
   private readonly tokenSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_TOKEN));
   private readonly userIdSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_USER_ID));
   private readonly userNameSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_NAME));
+  private readonly colorSignal = signal<string | null>(localStorage.getItem(STORAGE_KEY_COLOR));
 
   readonly token = computed(() => this.tokenSignal());
   readonly userId = computed(() => this.userIdSignal());
   readonly displayName = computed(() => this.userNameSignal());
+  readonly color = computed(() => this.colorSignal());
   readonly isAuthenticated = computed(() => this.tokenSignal() !== null);
 
   constructor(private readonly http: HttpClient) {}
@@ -46,17 +49,21 @@ export class CurrentUserService {
     localStorage.removeItem(STORAGE_KEY_TOKEN);
     localStorage.removeItem(STORAGE_KEY_USER_ID);
     localStorage.removeItem(STORAGE_KEY_NAME);
+    localStorage.removeItem(STORAGE_KEY_COLOR);
     this.tokenSignal.set(null);
     this.userIdSignal.set(null);
     this.userNameSignal.set(null);
+    this.colorSignal.set(null);
   }
 
   private applyAuthResult(result: AuthResult): void {
     localStorage.setItem(STORAGE_KEY_TOKEN, result.token);
     localStorage.setItem(STORAGE_KEY_USER_ID, result.userId);
     localStorage.setItem(STORAGE_KEY_NAME, result.displayName);
+    localStorage.setItem(STORAGE_KEY_COLOR, result.color);
     this.tokenSignal.set(result.token);
     this.userIdSignal.set(result.userId);
     this.userNameSignal.set(result.displayName);
+    this.colorSignal.set(result.color);
   }
 }
