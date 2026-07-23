@@ -6,13 +6,16 @@ import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 import { UserService } from '../../../core/services/user.service';
+import { BoardService } from '../../../core/services/board.service';
 import { TaskDto, TaskPriority, TaskState } from '../../../core/models/task.model';
 import { AlertDto, AlertSeverity } from '../../../core/models/alert.model';
 import { UserDto } from '../../../core/models/user.model';
+import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
 
 describe('BoardDetailComponent', () => {
   let taskService: jasmine.SpyObj<TaskService>;
   let userService: jasmine.SpyObj<UserService>;
+  let boardService: jasmine.SpyObj<BoardService>;
   let alertService: {
     alerts: ReturnType<typeof signal<AlertDto[]>>;
     connectToBoard: jasmine.Spy;
@@ -35,10 +38,17 @@ describe('BoardDetailComponent', () => {
     updatedAtUtc: '2026-01-01T00:00:00Z'
   };
 
-  const user: UserDto = {
-    id: 'user-1',
+  const owner: BoardMemberDto = {
+    userId: 'user-1',
     displayName: 'Ada',
-    email: 'ada@example.com'
+    email: 'ada@example.com',
+    role: BoardRole.Owner
+  };
+
+  const otherUser: UserDto = {
+    id: 'user-2',
+    displayName: 'Bob',
+    email: 'bob@example.com'
   };
 
   const alert: AlertDto = {
@@ -60,6 +70,14 @@ describe('BoardDetailComponent', () => {
     ]);
     userService = jasmine.createSpyObj<UserService>('UserService', ['getAll']);
     userService.getAll.and.resolveTo([]);
+    boardService = jasmine.createSpyObj<BoardService>('BoardService', [
+      'getAll',
+      'create',
+      'getMembers',
+      'addMember',
+      'removeMember'
+    ]);
+    boardService.getMembers.and.resolveTo([]);
     alertService = {
       alerts: signal<AlertDto[]>([]),
       connectToBoard: jasmine.createSpy('connectToBoard').and.resolveTo(undefined),
@@ -75,6 +93,7 @@ describe('BoardDetailComponent', () => {
       providers: [
         { provide: TaskService, useValue: taskService },
         { provide: UserService, useValue: userService },
+        { provide: BoardService, useValue: boardService },
         { provide: AlertService, useValue: alertService },
         { provide: CurrentUserService, useValue: currentUser },
         {
@@ -94,29 +113,31 @@ describe('BoardDetailComponent', () => {
     expect(component.boardId).toBe('board-1');
   });
 
-  it('loads tasks, users and connects to the alerts hub on init', async () => {
+  it('loads tasks, members, users and connects to the alerts hub on init', async () => {
     const { component } = createComponent();
     taskService.getBoardTasks.and.resolveTo([task]);
-    userService.getAll.and.resolveTo([user]);
+    boardService.getMembers.and.resolveTo([owner]);
+    userService.getAll.and.resolveTo([otherUser]);
 
     await component.ngOnInit();
 
     expect(taskService.getBoardTasks).toHaveBeenCalledWith('board-1');
+    expect(boardService.getMembers).toHaveBeenCalledWith('board-1');
     expect(userService.getAll).toHaveBeenCalled();
     expect(alertService.connectToBoard).toHaveBeenCalledWith('board-1');
     expect(component.tasks()).toEqual([task]);
-    expect(component.users()).toEqual([user]);
+    expect(component.members()).toEqual([owner]);
     expect(component.isLoading()).toBeFalse();
   });
 
-  it('silently ignores a failure to load users, keeping the assignee list empty', async () => {
+  it('silently ignores a failure to load members, keeping the assignee list empty', async () => {
     const { component } = createComponent();
     taskService.getBoardTasks.and.resolveTo([]);
-    userService.getAll.and.rejectWith(new Error('boom'));
+    boardService.getMembers.and.rejectWith(new Error('boom'));
 
     await component.ngOnInit();
 
-    expect(component.users()).toEqual([]);
+    expect(component.members()).toEqual([]);
     expect(component.errorMessage()).toBeNull();
   });
 
@@ -207,10 +228,10 @@ describe('BoardDetailComponent', () => {
     expect(component.errorMessage()).toContain('Could not assign');
   });
 
-  it('assigneeName resolves the display name from the loaded users, or null when unassigned', async () => {
+  it('assigneeName resolves the display name from the loaded members, or null when unassigned', async () => {
     const { component } = createComponent();
     taskService.getBoardTasks.and.resolveTo([]);
-    userService.getAll.and.resolveTo([user]);
+    boardService.getMembers.and.resolveTo([owner]);
     await component.ngOnInit();
 
     expect(component.assigneeName(task)).toBeNull();
@@ -264,5 +285,89 @@ describe('BoardDetailComponent', () => {
     await component.ngOnDestroy();
 
     expect(alertService.disconnect).toHaveBeenCalled();
+  });
+
+  it('isOwner is true when the current user is an Owner member of the board', async () => {
+    const { component } = createComponent();
+    boardService.getMembers.and.resolveTo([owner]);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.ngOnInit();
+
+    expect(component.isOwner()).toBeTrue();
+  });
+
+  it('isOwner is false when the current user is a Member (or not on the board)', async () => {
+    const { component } = createComponent();
+    boardService.getMembers.and.resolveTo([{ ...owner, role: BoardRole.Member }]);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.ngOnInit();
+
+    expect(component.isOwner()).toBeFalse();
+  });
+
+  it('addableUsers excludes users already on the board', async () => {
+    const { component } = createComponent();
+    const ownerAsUser: UserDto = { id: owner.userId, displayName: owner.displayName, email: owner.email };
+    boardService.getMembers.and.resolveTo([owner]);
+    userService.getAll.and.resolveTo([ownerAsUser, otherUser]);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.ngOnInit();
+
+    expect(component.addableUsers()).toEqual([otherUser]);
+  });
+
+  it('addMember adds the chosen user with the chosen role and reloads members', async () => {
+    const { component } = createComponent();
+    boardService.addMember.and.resolveTo(undefined);
+    boardService.getMembers.and.resolveTo([owner]);
+    component.newMemberUserId = 'user-2';
+    component.newMemberRole = BoardRole.Member;
+
+    await component.addMember();
+
+    expect(boardService.addMember).toHaveBeenCalledWith('board-1', { userId: 'user-2', role: BoardRole.Member });
+    expect(component.newMemberUserId).toBe('');
+    expect(boardService.getMembers).toHaveBeenCalled();
+  });
+
+  it('addMember does nothing when no user is chosen', async () => {
+    const { component } = createComponent();
+
+    await component.addMember();
+
+    expect(boardService.addMember).not.toHaveBeenCalled();
+  });
+
+  it('addMember sets an error message when it fails', async () => {
+    const { component } = createComponent();
+    boardService.addMember.and.rejectWith(new Error('boom'));
+    component.newMemberUserId = 'user-2';
+
+    await component.addMember();
+
+    expect(component.errorMessage()).toContain('Could not add this member');
+  });
+
+  it('removeMember removes the member and reloads the list', async () => {
+    const { component } = createComponent();
+    boardService.removeMember.and.resolveTo(undefined);
+    boardService.getMembers.and.resolveTo([]);
+
+    await component.removeMember('user-2');
+
+    expect(boardService.removeMember).toHaveBeenCalledWith('board-1', 'user-2');
+    expect(boardService.getMembers).toHaveBeenCalled();
+  });
+
+  it('removeMember sets an error message when it fails', async () => {
+    const { component } = createComponent();
+    boardService.removeMember.and.rejectWith(new Error('boom'));
+
+    await component.removeMember('user-2');
+
+    expect(component.errorMessage()).toContain('Could not remove this member');
   });
 });

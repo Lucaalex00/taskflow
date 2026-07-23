@@ -4,12 +4,14 @@ using TaskFlow.Application.Common.Interfaces;
 
 namespace TaskFlow.Application.Alerts.Queries.GetBoardAlerts;
 
-public sealed class GetBoardAlertsQueryHandler(ITaskFlowDbContext context)
+public sealed class GetBoardAlertsQueryHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer)
     : IRequestHandler<GetBoardAlertsQuery, IReadOnlyList<AlertDto>>
 {
     public async Task<IReadOnlyList<AlertDto>> Handle(
         GetBoardAlertsQuery request, CancellationToken cancellationToken)
     {
+        await boardAuthorizer.EnsureMemberAsync(request.BoardId, cancellationToken);
+
         var query = context.Alerts.AsNoTracking().Where(a => a.BoardId == request.BoardId);
 
         if (request.UnreadOnly)

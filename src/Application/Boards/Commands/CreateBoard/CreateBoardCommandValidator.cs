@@ -7,6 +7,5 @@ public sealed class CreateBoardCommandValidator : AbstractValidator<CreateBoardC
     public CreateBoardCommandValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.OwnerId).NotEmpty();
     }
 }

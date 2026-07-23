@@ -4,10 +4,51 @@
   <section class="kanban">
     <div class="kanban__header">
       <h1 class="kanban__title mono">Board</h1>
-      <button class="btn btn--primary" (click)="isTaskFormOpen.set(!isTaskFormOpen())">
-        {{ isTaskFormOpen() ? 'Cancel' : '+ New task' }}
-      </button>
+      <div class="kanban__header-actions">
+        <button class="btn btn--ghost" (click)="isMembersOpen.set(!isMembersOpen())">
+          {{ isMembersOpen() ? 'Hide members' : 'Members (' + members().length + ')' }}
+        </button>
+        <button class="btn btn--primary" (click)="isTaskFormOpen.set(!isTaskFormOpen())">
+          {{ isTaskFormOpen() ? 'Cancel' : '+ New task' }}
+        </button>
+      </div>
     </div>
+
+    @if (isMembersOpen()) {
+      <section class="members-panel">
+        <ul class="member-list">
+          @for (member of members(); track member.userId) {
+            <li class="member-list__item">
+              <span class="member-list__name">{{ member.displayName }}</span>
+              <span class="member-list__role mono">{{ member.role }}</span>
+              @if (isOwner()) {
+                <button class="btn btn--ghost member-list__remove" (click)="removeMember(member.userId)">
+                  Remove
+                </button>
+              }
+            </li>
+          }
+        </ul>
+
+        @if (isOwner()) {
+          <form class="add-member-form" (ngSubmit)="addMember()">
+            <select class="field__select" name="newMemberUserId" [(ngModel)]="newMemberUserId" required>
+              <option value="">— choose user —</option>
+              @for (u of addableUsers(); track u.id) {
+                <option [value]="u.id">{{ u.displayName }} ({{ u.email }})</option>
+              }
+            </select>
+            <select class="field__select" name="newMemberRole" [(ngModel)]="newMemberRole">
+              <option [value]="BoardRole.Member">Member</option>
+              <option [value]="BoardRole.Owner">Owner</option>
+            </select>
+            <button class="btn btn--primary" type="submit" [disabled]="isAddingMember() || !newMemberUserId">
+              {{ isAddingMember() ? 'Adding…' : 'Add' }}
+            </button>
+          </form>
+        }
+      </section>
+    }
 
     @if (isTaskFormOpen()) {
       <form class="task-form" (ngSubmit)="createTask()">
@@ -88,8 +129,8 @@
                       (ngModelChange)="assignTo(task, $event)"
                     >
                       <option value="">— choose assignee —</option>
-                      @for (u of users(); track u.id) {
-                        <option [value]="u.id">{{ u.displayName }}</option>
+                      @for (m of members(); track m.userId) {
+                        <option [value]="m.userId">{{ m.displayName }}</option>
                       }
                     </select>
                   </label>

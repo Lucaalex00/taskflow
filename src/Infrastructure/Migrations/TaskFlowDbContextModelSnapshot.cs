@@ -93,6 +93,34 @@ namespace TaskFlow.Infrastructure.Migrations
                     b.ToTable("alert_rules", (string)null);
                 });
 
+            modelBuilder.Entity("TaskFlow.Domain.Entities.BoardMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("JoinedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BoardId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("board_members", (string)null);
+                });
+
             modelBuilder.Entity("TaskFlow.Domain.Entities.LoadMetric", b =>
                 {
                     b.Property<Guid>("Id")

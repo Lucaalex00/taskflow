@@ -6,7 +6,8 @@ using TaskFlow.Domain.Entities;
 
 namespace TaskFlow.Application.Tasks.Commands.AssignTask;
 
-public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context) : IRequestHandler<AssignTaskCommand>
+public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer)
+    : IRequestHandler<AssignTaskCommand>
 {
     public async Task Handle(AssignTaskCommand request, CancellationToken cancellationToken)
     {
@@ -14,9 +15,15 @@ public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context) : IRequ
             .FirstOrDefaultAsync(t => t.Id == request.TaskId, cancellationToken)
             ?? throw new NotFoundException(nameof(TaskItem), request.TaskId);
 
-        var userExists = await context.Users.AnyAsync(u => u.Id == request.UserId, cancellationToken);
-        if (!userExists)
-            throw new NotFoundException(nameof(Domain.Entities.User), request.UserId);
+        await boardAuthorizer.EnsureMemberAsync(task.BoardId, cancellationToken);
+
+        var assigneeIsBoardMember = await context.BoardMembers
+            .AnyAsync(m => m.BoardId == task.BoardId && m.UserId == request.UserId, cancellationToken);
+        if (!assigneeIsBoardMember)
+            throw new Common.Exceptions.ValidationException(
+            [
+                new FluentValidation.Results.ValidationFailure(nameof(request.UserId), "This user is not a member of the task's board.")
+            ]);
 
         var result = task.AssignTo(request.UserId);
 

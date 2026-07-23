@@ -33,8 +33,7 @@ export class BoardListComponent implements OnInit {
   }
 
   async createBoard(): Promise<void> {
-    const ownerId = this.currentUser.userId();
-    if (!ownerId || !this.newBoardName.trim()) {
+    if (!this.newBoardName.trim()) {
       return;
     }
 
@@ -42,7 +41,7 @@ export class BoardListComponent implements OnInit {
     this.errorMessage.set(null);
 
     try {
-      await this.boardService.create({ name: this.newBoardName.trim(), ownerId });
+      await this.boardService.create({ name: this.newBoardName.trim() });
       this.newBoardName = '';
       await this.loadBoards();
     } catch {

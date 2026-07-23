@@ -12,6 +12,7 @@ public class TaskFlowDbContext(DbContextOptions<TaskFlowDbContext> options, IPub
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<ProjectBoard> Boards => Set<ProjectBoard>();
+    public DbSet<BoardMember> BoardMembers => Set<BoardMember>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<AlertRule> AlertRules => Set<AlertRule>();
     public DbSet<Alert> Alerts => Set<Alert>();

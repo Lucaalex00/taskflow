@@ -8,5 +8,21 @@ export interface BoardDto {
 
 export interface CreateBoardRequest {
   name: string;
-  ownerId: string;
+}
+
+export enum BoardRole {
+  Owner = 'Owner',
+  Member = 'Member'
+}
+
+export interface BoardMemberDto {
+  userId: string;
+  displayName: string;
+  email: string;
+  role: BoardRole;
+}
+
+export interface AddBoardMemberRequest {
+  userId: string;
+  role: BoardRole;
 }

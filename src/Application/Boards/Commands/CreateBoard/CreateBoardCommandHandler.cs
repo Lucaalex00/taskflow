@@ -1,21 +1,16 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Application.Common.Interfaces;
 using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Enums;
 
 namespace TaskFlow.Application.Boards.Commands.CreateBoard;
 
-public sealed class CreateBoardCommandHandler(ITaskFlowDbContext context)
+public sealed class CreateBoardCommandHandler(ITaskFlowDbContext context, ICurrentUserService currentUser)
     : IRequestHandler<CreateBoardCommand, Guid>
 {
     public async Task<Guid> Handle(CreateBoardCommand request, CancellationToken cancellationToken)
     {
-        var ownerExists = await context.Users.AnyAsync(u => u.Id == request.OwnerId, cancellationToken);
-        if (!ownerExists)
-            throw new NotFoundException(nameof(Domain.Entities.User), request.OwnerId);
-
-        var result = ProjectBoard.Create(request.Name, request.OwnerId);
+        var result = ProjectBoard.Create(request.Name, currentUser.UserId);
 
         if (!result.IsSuccess)
             throw new Common.Exceptions.ValidationException(
@@ -23,7 +18,10 @@ public sealed class CreateBoardCommandHandler(ITaskFlowDbContext context)
                 new FluentValidation.Results.ValidationFailure(nameof(request.Name), result.Error)
             ]);
 
+        var membership = BoardMember.Create(result.Value.Id, currentUser.UserId, BoardRole.Owner);
+
         context.Boards.Add(result.Value);
+        context.BoardMembers.Add(membership.Value);
         await context.SaveChangesAsync(cancellationToken);
 
         return result.Value.Id;

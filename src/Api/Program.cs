@@ -50,6 +50,10 @@ var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<Jw
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Keep claim names exactly as issued (e.g. "sub"), instead of ASP.NET Core's default
+        // remapping of "sub" -> ClaimTypes.NameIdentifier, so ICurrentUserService and
+        // JwtTokenGenerator agree on the same claim name.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,

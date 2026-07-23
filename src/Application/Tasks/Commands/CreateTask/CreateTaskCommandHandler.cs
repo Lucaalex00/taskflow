@@ -6,7 +6,7 @@ using TaskFlow.Domain.Entities;
 
 namespace TaskFlow.Application.Tasks.Commands.CreateTask;
 
-public sealed class CreateTaskCommandHandler(ITaskFlowDbContext context)
+public sealed class CreateTaskCommandHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer)
     : IRequestHandler<CreateTaskCommand, Guid>
 {
     public async Task<Guid> Handle(CreateTaskCommand request, CancellationToken cancellationToken)
@@ -16,6 +16,8 @@ public sealed class CreateTaskCommandHandler(ITaskFlowDbContext context)
 
         if (!boardExists)
             throw new NotFoundException(nameof(ProjectBoard), request.BoardId);
+
+        await boardAuthorizer.EnsureMemberAsync(request.BoardId, cancellationToken);
 
         var result = TaskItem.Create(
             request.BoardId, request.Title, request.Description, request.Priority, request.DueAtUtc);

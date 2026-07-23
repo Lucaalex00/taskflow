@@ -3,6 +3,8 @@ using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using TaskFlow.Application.Common.Behaviors;
+using TaskFlow.Application.Common.Interfaces;
+using TaskFlow.Application.Common.Services;
 
 namespace TaskFlow.Application;
 
@@ -19,6 +21,7 @@ public static class DependencyInjection
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
         services.AddValidatorsFromAssembly(assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddScoped<IBoardAuthorizer, BoardAuthorizer>();
 
         return services;
     }

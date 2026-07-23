@@ -6,7 +6,7 @@ using TaskFlow.Domain.Entities;
 
 namespace TaskFlow.Application.Tasks.Commands.TransitionTaskState;
 
-public sealed class TransitionTaskStateCommandHandler(ITaskFlowDbContext context)
+public sealed class TransitionTaskStateCommandHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer)
     : IRequestHandler<TransitionTaskStateCommand>
 {
     public async Task Handle(TransitionTaskStateCommand request, CancellationToken cancellationToken)
@@ -14,6 +14,8 @@ public sealed class TransitionTaskStateCommandHandler(ITaskFlowDbContext context
         var task = await context.Tasks
             .FirstOrDefaultAsync(t => t.Id == request.TaskId, cancellationToken)
             ?? throw new NotFoundException(nameof(TaskItem), request.TaskId);
+
+        await boardAuthorizer.EnsureMemberAsync(task.BoardId, cancellationToken);
 
         var result = task.TransitionTo(request.NewState);
 

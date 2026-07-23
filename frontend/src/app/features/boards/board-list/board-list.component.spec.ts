@@ -70,7 +70,7 @@ describe('BoardListComponent', () => {
 
     await component.createBoard();
 
-    expect(boardService.create).toHaveBeenCalledWith({ name: 'Sprint 2', ownerId: 'user-1' });
+    expect(boardService.create).toHaveBeenCalledWith({ name: 'Sprint 2' });
     expect(component.newBoardName).toBe('');
     expect(boardService.getAll).toHaveBeenCalled();
   });

@@ -18,7 +18,7 @@ public class CreateTaskCommandHandlerTests
         context.Boards.Add(board);
         await context.SaveChangesAsync();
 
-        var handler = new CreateTaskCommandHandler(context);
+        var handler = new CreateTaskCommandHandler(context, new FakeBoardAuthorizer());
         var command = new CreateTaskCommand(board.Id, "Write ADRs", "Document key decisions", TaskPriority.High, null);
 
         var taskId = await handler.Handle(command, CancellationToken.None);
@@ -33,7 +33,7 @@ public class CreateTaskCommandHandlerTests
     public async Task Handle_WithNonExistingBoard_ThrowsNotFoundException()
     {
         await using var context = new TestDbContext();
-        var handler = new CreateTaskCommandHandler(context);
+        var handler = new CreateTaskCommandHandler(context, new FakeBoardAuthorizer());
         var command = new CreateTaskCommand(Guid.NewGuid(), "Orphan task", null, TaskPriority.Low, null);
 
         var act = async () => await handler.Handle(command, CancellationToken.None);

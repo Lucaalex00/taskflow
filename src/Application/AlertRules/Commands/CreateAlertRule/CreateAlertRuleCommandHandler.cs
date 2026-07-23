@@ -6,7 +6,7 @@ using TaskFlow.Domain.Entities;
 
 namespace TaskFlow.Application.AlertRules.Commands.CreateAlertRule;
 
-public sealed class CreateAlertRuleCommandHandler(ITaskFlowDbContext context)
+public sealed class CreateAlertRuleCommandHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer)
     : IRequestHandler<CreateAlertRuleCommand, Guid>
 {
     public async Task<Guid> Handle(CreateAlertRuleCommand request, CancellationToken cancellationToken)
@@ -14,6 +14,9 @@ public sealed class CreateAlertRuleCommandHandler(ITaskFlowDbContext context)
         var boardExists = await context.Boards.AnyAsync(b => b.Id == request.BoardId, cancellationToken);
         if (!boardExists)
             throw new NotFoundException(nameof(ProjectBoard), request.BoardId);
+
+        // Rule thresholds affect what fires for the whole board, so only the Owner configures them.
+        await boardAuthorizer.EnsureOwnerAsync(request.BoardId, cancellationToken);
 
         var result = AlertRule.Create(
             request.BoardId, request.RuleType, request.Threshold, request.EvaluationWindowMinutes);
