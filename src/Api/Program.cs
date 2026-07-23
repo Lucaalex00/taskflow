@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using TaskFlow.Api.Middleware;
@@ -19,7 +20,12 @@ builder.Host.UseSerilog((context, configuration) =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddControllers();
+// Enums (TaskState, TaskPriority, AlertSeverity, ...) must round-trip as strings —
+// the Angular client sends/expects e.g. "Medium", not the numeric default System.Text.Json
+// would otherwise use. Without this, requests with an enum body field fail deserialization
+// and every enum field in a response comes back as a number the frontend never matches.
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
