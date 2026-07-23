@@ -1,0 +1,51 @@
+<div class="notification-bell">
+  <button class="notification-bell__toggle" type="button" (click)="toggle()">
+    <span class="notification-bell__icon" aria-hidden="true">&#128276;</span>
+    @if (unreadCount() > 0) {
+      <span class="notification-bell__badge mono">{{ unreadCount() }}</span>
+    }
+  </button>
+
+  @if (isOpen()) {
+    <div class="notification-panel">
+      @if (errorMessage()) {
+        <p class="form-error">{{ errorMessage() }}</p>
+      }
+
+      @if (notificationService.notifications().length === 0) {
+        <p class="notification-panel__empty mono muted">no notifications</p>
+      } @else {
+        <ul class="notification-list">
+          @for (notification of notificationService.notifications(); track notification.id) {
+            <li
+              class="notification-item"
+              [class.notification-item--unread]="!notification.isRead"
+              [attr.tabindex]="notification.isRead ? null : 0"
+              [attr.role]="notification.isRead ? null : 'button'"
+              (click)="!notification.isRead && open(notification.id)"
+              (keydown.enter)="!notification.isRead && open(notification.id)"
+            >
+              <p class="notification-item__message">{{ notification.message }}</p>
+              <span class="notification-item__time mono muted">
+                {{ notification.createdAtUtc | date: 'MMM d, HH:mm' }}
+              </span>
+
+              @if (notification.type === NotificationType.BoardInvitation && notification.invitationStatus === InvitationStatus.Pending) {
+                <div class="notification-item__actions">
+                  <button class="btn btn--primary" type="button" (click)="respond(notification.invitationId!, true); $event.stopPropagation()">
+                    Accept
+                  </button>
+                  <button class="btn btn--ghost" type="button" (click)="respond(notification.invitationId!, false); $event.stopPropagation()">
+                    Decline
+                  </button>
+                </div>
+              } @else if (notification.type === NotificationType.BoardInvitation) {
+                <span class="notification-item__status mono muted">{{ notification.invitationStatus }}</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

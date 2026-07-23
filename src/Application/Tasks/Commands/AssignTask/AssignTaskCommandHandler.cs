@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using TaskFlow.Application.Common.Exceptions;
 using TaskFlow.Application.Common.Interfaces;
 using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Enums;
 
 namespace TaskFlow.Application.Tasks.Commands.AssignTask;
 
-public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer)
+public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context, IBoardAuthorizer boardAuthorizer, ICurrentUserService currentUser)
     : IRequestHandler<AssignTaskCommand>
 {
     public async Task Handle(AssignTaskCommand request, CancellationToken cancellationToken)
@@ -15,7 +16,8 @@ public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context, IBoardA
             .FirstOrDefaultAsync(t => t.Id == request.TaskId, cancellationToken)
             ?? throw new NotFoundException(nameof(TaskItem), request.TaskId);
 
-        await boardAuthorizer.EnsureMemberAsync(task.BoardId, cancellationToken);
+        // Only the board Owner assigns work — Members can't assign to themselves or anyone else.
+        await boardAuthorizer.EnsureOwnerAsync(task.BoardId, cancellationToken);
 
         var assigneeIsBoardMember = await context.BoardMembers
             .AnyAsync(m => m.BoardId == task.BoardId && m.UserId == request.UserId, cancellationToken);
@@ -32,6 +34,15 @@ public sealed class AssignTaskCommandHandler(ITaskFlowDbContext context, IBoardA
             [
                 new FluentValidation.Results.ValidationFailure(nameof(request.UserId), result.Error)
             ]);
+
+        if (request.UserId != currentUser.UserId)
+        {
+            var notificationResult = Notification.Create(
+                request.UserId, NotificationType.TaskAssigned,
+                $"You were assigned to \"{task.Title}\".", boardId: task.BoardId, taskId: task.Id);
+
+            context.Notifications.Add(notificationResult.Value);
+        }
 
         await context.SaveChangesAsync(cancellationToken);
     }

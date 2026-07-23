@@ -5,16 +5,13 @@ import { BoardDetailComponent } from './board-detail.component';
 import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
-import { UserService } from '../../../core/services/user.service';
 import { BoardService } from '../../../core/services/board.service';
 import { TaskDto, TaskPriority, TaskState } from '../../../core/models/task.model';
 import { AlertDto, AlertSeverity } from '../../../core/models/alert.model';
-import { UserDto } from '../../../core/models/user.model';
 import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
 
 describe('BoardDetailComponent', () => {
   let taskService: jasmine.SpyObj<TaskService>;
-  let userService: jasmine.SpyObj<UserService>;
   let boardService: jasmine.SpyObj<BoardService>;
   let alertService: {
     alerts: ReturnType<typeof signal<AlertDto[]>>;
@@ -46,13 +43,6 @@ describe('BoardDetailComponent', () => {
     role: BoardRole.Owner
   };
 
-  const otherUser: UserDto = {
-    id: 'user-2',
-    displayName: 'Bob',
-    email: 'bob@example.com',
-    color: '#f6ad55'
-  };
-
   const alert: AlertDto = {
     id: 'alert-1',
     boardId: 'board-1',
@@ -70,13 +60,12 @@ describe('BoardDetailComponent', () => {
       'transitionState',
       'assign'
     ]);
-    userService = jasmine.createSpyObj<UserService>('UserService', ['getAll']);
-    userService.getAll.and.resolveTo([]);
     boardService = jasmine.createSpyObj<BoardService>('BoardService', [
       'getAll',
       'create',
       'getMembers',
-      'addMember',
+      'inviteMember',
+      'updateMemberRole',
       'removeMember'
     ]);
     boardService.getMembers.and.resolveTo([]);
@@ -94,7 +83,6 @@ describe('BoardDetailComponent', () => {
       imports: [BoardDetailComponent],
       providers: [
         { provide: TaskService, useValue: taskService },
-        { provide: UserService, useValue: userService },
         { provide: BoardService, useValue: boardService },
         { provide: AlertService, useValue: alertService },
         { provide: CurrentUserService, useValue: currentUser },
@@ -115,17 +103,15 @@ describe('BoardDetailComponent', () => {
     expect(component.boardId).toBe('board-1');
   });
 
-  it('loads tasks, members, users and connects to the alerts hub on init', async () => {
+  it('loads tasks, members and connects to the alerts hub on init', async () => {
     const { component } = createComponent();
     taskService.getBoardTasks.and.resolveTo([task]);
     boardService.getMembers.and.resolveTo([owner]);
-    userService.getAll.and.resolveTo([otherUser]);
 
     await component.ngOnInit();
 
     expect(taskService.getBoardTasks).toHaveBeenCalledWith('board-1');
     expect(boardService.getMembers).toHaveBeenCalledWith('board-1');
-    expect(userService.getAll).toHaveBeenCalled();
     expect(alertService.connectToBoard).toHaveBeenCalledWith('board-1');
     expect(component.tasks()).toEqual([task]);
     expect(component.members()).toEqual([owner]);
@@ -320,53 +306,53 @@ describe('BoardDetailComponent', () => {
     expect(component.isOwner()).toBeFalse();
   });
 
-  it('addableUsers excludes users already on the board', async () => {
+  it('inviteMember invites the entered email and resets the form', async () => {
     const { component } = createComponent();
-    const ownerAsUser: UserDto = {
-      id: owner.userId,
-      displayName: owner.displayName,
-      email: owner.email,
-      color: owner.color
-    };
-    boardService.getMembers.and.resolveTo([owner]);
-    userService.getAll.and.resolveTo([ownerAsUser, otherUser]);
-    taskService.getBoardTasks.and.resolveTo([]);
+    boardService.inviteMember.and.resolveTo(undefined);
+    component.newMemberEmail = 'teammate@example.com';
 
-    await component.ngOnInit();
+    await component.inviteMember();
 
-    expect(component.addableUsers()).toEqual([otherUser]);
+    expect(boardService.inviteMember).toHaveBeenCalledWith('board-1', { email: 'teammate@example.com' });
+    expect(component.newMemberEmail).toBe('');
   });
 
-  it('addMember adds the chosen user with the chosen role and reloads members', async () => {
+  it('inviteMember does nothing when the email is blank', async () => {
     const { component } = createComponent();
-    boardService.addMember.and.resolveTo(undefined);
-    boardService.getMembers.and.resolveTo([owner]);
-    component.newMemberUserId = 'user-2';
-    component.newMemberRole = BoardRole.Member;
 
-    await component.addMember();
+    await component.inviteMember();
 
-    expect(boardService.addMember).toHaveBeenCalledWith('board-1', { userId: 'user-2', role: BoardRole.Member });
-    expect(component.newMemberUserId).toBe('');
+    expect(boardService.inviteMember).not.toHaveBeenCalled();
+  });
+
+  it('inviteMember sets an error message when it fails', async () => {
+    const { component } = createComponent();
+    boardService.inviteMember.and.rejectWith(new Error('boom'));
+    component.newMemberEmail = 'teammate@example.com';
+
+    await component.inviteMember();
+
+    expect(component.errorMessage()).toContain('Could not invite');
+  });
+
+  it('changeMemberRole updates the role and reloads the member list', async () => {
+    const { component } = createComponent();
+    boardService.updateMemberRole.and.resolveTo(undefined);
+    boardService.getMembers.and.resolveTo([{ ...owner, role: BoardRole.Owner }]);
+
+    await component.changeMemberRole('user-2', BoardRole.Owner);
+
+    expect(boardService.updateMemberRole).toHaveBeenCalledWith('board-1', 'user-2', { role: BoardRole.Owner });
     expect(boardService.getMembers).toHaveBeenCalled();
   });
 
-  it('addMember does nothing when no user is chosen', async () => {
+  it('changeMemberRole sets an error message when it fails', async () => {
     const { component } = createComponent();
+    boardService.updateMemberRole.and.rejectWith(new Error('boom'));
 
-    await component.addMember();
+    await component.changeMemberRole('user-2', BoardRole.Owner);
 
-    expect(boardService.addMember).not.toHaveBeenCalled();
-  });
-
-  it('addMember sets an error message when it fails', async () => {
-    const { component } = createComponent();
-    boardService.addMember.and.rejectWith(new Error('boom'));
-    component.newMemberUserId = 'user-2';
-
-    await component.addMember();
-
-    expect(component.errorMessage()).toContain('Could not add this member');
+    expect(component.errorMessage()).toContain("Could not change this member's role");
   });
 
   it('removeMember removes the member and reloads the list', async () => {

@@ -34,4 +34,9 @@ public class BoardMember : Entity
 
         return Result.Success(new BoardMember(boardId, userId, role));
     }
+
+    public void ChangeRole(BoardRole newRole)
+    {
+        Role = newRole;
+    }
 }

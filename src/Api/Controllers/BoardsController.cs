@@ -2,9 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Boards;
-using TaskFlow.Application.Boards.Commands.AddBoardMember;
 using TaskFlow.Application.Boards.Commands.CreateBoard;
+using TaskFlow.Application.Boards.Commands.InviteBoardMember;
 using TaskFlow.Application.Boards.Commands.RemoveBoardMember;
+using TaskFlow.Application.Boards.Commands.UpdateBoardMemberRole;
 using TaskFlow.Application.Boards.Queries.GetBoardMembers;
 using TaskFlow.Application.Boards.Queries.GetBoards;
 using TaskFlow.Domain.Enums;
@@ -45,16 +46,29 @@ public sealed class BoardsController(ISender sender) : ControllerBase
         return Ok(members);
     }
 
-    /// <summary>Adds a registered user to the board. Owner only.</summary>
-    [HttpPost("{boardId:guid}/members")]
+    /// <summary>Invites a user (by email) to the board. They join as a Member once they accept.
+    /// Owner only.</summary>
+    [HttpPost("{boardId:guid}/invitations")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> InviteMember(
+        Guid boardId, InviteBoardMemberRequest request, CancellationToken cancellationToken)
+    {
+        await sender.Send(new InviteBoardMemberCommand(boardId, request.Email), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Changes an existing member's role. Owner only; a board must keep at least one owner.</summary>
+    [HttpPatch("{boardId:guid}/members/{userId:guid}/role")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AddMember(
-        Guid boardId, AddBoardMemberRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateMemberRole(
+        Guid boardId, Guid userId, UpdateBoardMemberRoleRequest request, CancellationToken cancellationToken)
     {
-        await sender.Send(new AddBoardMemberCommand(boardId, request.UserId, request.Role), cancellationToken);
+        await sender.Send(new UpdateBoardMemberRoleCommand(boardId, userId, request.Role), cancellationToken);
         return NoContent();
     }
 
@@ -71,4 +85,5 @@ public sealed class BoardsController(ISender sender) : ControllerBase
     }
 }
 
-public sealed record AddBoardMemberRequest(Guid UserId, BoardRole Role);
+public sealed record InviteBoardMemberRequest(string Email);
+public sealed record UpdateBoardMemberRoleRequest(BoardRole Role);

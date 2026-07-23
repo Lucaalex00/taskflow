@@ -241,19 +241,25 @@
   margin: 0;
 }
 
-.assignee-select {
+.assignee-display {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.assignee-select .field__label {
+.assignee-display .field__label {
   font-size: 10px;
 }
 
-.assignee-select .field__select {
+.assignee-display .field__select {
   padding: 4px 6px;
   font-size: 11px;
+}
+
+.member-list__role-select {
+  padding: 2px 6px;
+  font-size: 11px;
+  width: auto;
 }
 
 .task-card__actions {

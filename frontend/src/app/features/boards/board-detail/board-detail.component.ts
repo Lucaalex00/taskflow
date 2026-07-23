@@ -5,11 +5,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
-import { UserService } from '../../../core/services/user.service';
 import { BoardService } from '../../../core/services/board.service';
 import { TaskDto, TaskState, TaskPriority } from '../../../core/models/task.model';
 import { AlertSeverity } from '../../../core/models/alert.model';
-import { UserDto } from '../../../core/models/user.model';
 import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
 
 /** Mirrors TaskItem's state machine in the Domain layer (see TaskItem.IsValidTransition). */
@@ -48,7 +46,6 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
 
   readonly tasks = signal<TaskDto[]>([]);
   readonly members = signal<BoardMemberDto[]>([]);
-  readonly allUsers = signal<UserDto[]>([]);
   readonly isLoading = signal(true);
   readonly showCancelled = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -71,12 +68,6 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     () => this.members().find((m) => m.userId === this.currentUser.userId())?.role === BoardRole.Owner
   );
 
-  /** Registered users not yet on this board — candidates for the "add member" picker. */
-  readonly addableUsers = computed(() => {
-    const memberIds = new Set(this.members().map((m) => m.userId));
-    return this.allUsers().filter((u) => !memberIds.has(u.id));
-  });
-
   // New task form state.
   newTaskTitle = '';
   newTaskDescription = '';
@@ -84,15 +75,13 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   newTaskDueDate = '';
   readonly isCreatingTask = signal(false);
 
-  // Add member form state.
-  newMemberUserId = '';
-  newMemberRole: BoardRole = BoardRole.Member;
-  readonly isAddingMember = signal(false);
+  // Invite member form state.
+  newMemberEmail = '';
+  readonly isInvitingMember = signal(false);
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly taskService: TaskService,
-    private readonly userService: UserService,
     private readonly boardService: BoardService,
     readonly alertService: AlertService,
     readonly currentUser: CurrentUserService
@@ -104,7 +93,6 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     await Promise.all([
       this.loadTasks(),
       this.loadMembers(),
-      this.loadAllUsers(),
       this.alertService.connectToBoard(this.boardId)
     ]);
   }
@@ -182,24 +170,28 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     }
   }
 
-  async addMember(): Promise<void> {
-    if (!this.newMemberUserId) return;
+  async inviteMember(): Promise<void> {
+    if (!this.newMemberEmail.trim()) return;
 
-    this.isAddingMember.set(true);
+    this.isInvitingMember.set(true);
     this.errorMessage.set(null);
 
     try {
-      await this.boardService.addMember(this.boardId, {
-        userId: this.newMemberUserId,
-        role: this.newMemberRole
-      });
-      this.newMemberUserId = '';
-      this.newMemberRole = BoardRole.Member;
+      await this.boardService.inviteMember(this.boardId, { email: this.newMemberEmail.trim() });
+      this.newMemberEmail = '';
+    } catch {
+      this.errorMessage.set('Could not invite this email (they may already be invited or a member).');
+    } finally {
+      this.isInvitingMember.set(false);
+    }
+  }
+
+  async changeMemberRole(userId: string, role: BoardRole): Promise<void> {
+    try {
+      await this.boardService.updateMemberRole(this.boardId, userId, { role });
       await this.loadMembers();
     } catch {
-      this.errorMessage.set('Could not add this member to the board.');
-    } finally {
-      this.isAddingMember.set(false);
+      this.errorMessage.set('Could not change this member\'s role (a board must keep at least one owner).');
     }
   }
 
@@ -235,14 +227,6 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
       this.members.set(await this.boardService.getMembers(this.boardId));
     } catch {
       // Non-critical: the assignee dropdown and member list just stay empty.
-    }
-  }
-
-  private async loadAllUsers(): Promise<void> {
-    try {
-      this.allUsers.set(await this.userService.getAll());
-    } catch {
-      // Non-critical: only affects the "add member" picker.
     }
   }
 }

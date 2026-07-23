@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TaskFlow.Application.Common.Interfaces;
 using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Enums;
 
 namespace TaskFlow.Application.Users.Commands.CreateUser;
 
@@ -27,10 +28,32 @@ public sealed class CreateUserCommandHandler(
                 new FluentValidation.Results.ValidationFailure(nameof(request.Email), result.Error)
             ]);
 
-        context.Users.Add(result.Value);
+        var user = result.Value;
+        context.Users.Add(user);
+
+        // Link any invitations sent to this email before the person had an account, and
+        // surface them as notifications now that there's someone to notify.
+        var pendingInvitations = await context.BoardInvitations
+            .Where(i => i.InviteeEmail == normalizedEmail
+                && i.InviteeUserId == null
+                && i.Status == InvitationStatus.Pending)
+            .ToListAsync(cancellationToken);
+
+        foreach (var invitation in pendingInvitations)
+        {
+            invitation.LinkInvitee(user.Id);
+
+            var board = await context.Boards.FirstOrDefaultAsync(b => b.Id == invitation.BoardId, cancellationToken);
+            var notificationResult = Notification.Create(
+                user.Id, NotificationType.BoardInvitation,
+                $"You've been invited to join the board \"{board?.Name ?? "a board"}\".",
+                boardId: invitation.BoardId, invitationId: invitation.Id);
+
+            context.Notifications.Add(notificationResult.Value);
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
-        return new AuthResult(
-            result.Value.Id, result.Value.DisplayName, result.Value.Color, tokenGenerator.GenerateToken(result.Value));
+        return new AuthResult(user.Id, user.DisplayName, user.Color, tokenGenerator.GenerateToken(user));
     }
 }

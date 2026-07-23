@@ -2,7 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AddBoardMemberRequest, BoardDto, BoardMemberDto, CreateBoardRequest } from '../models/board.model';
+import {
+  BoardDto,
+  BoardMemberDto,
+  CreateBoardRequest,
+  InviteBoardMemberRequest,
+  UpdateBoardMemberRoleRequest
+} from '../models/board.model';
 
 @Injectable({ providedIn: 'root' })
 export class BoardService {
@@ -22,8 +28,12 @@ export class BoardService {
     return firstValueFrom(this.http.get<BoardMemberDto[]>(`${this.baseUrl}/${boardId}/members`));
   }
 
-  addMember(boardId: string, request: AddBoardMemberRequest): Promise<void> {
-    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${boardId}/members`, request));
+  inviteMember(boardId: string, request: InviteBoardMemberRequest): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.baseUrl}/${boardId}/invitations`, request));
+  }
+
+  updateMemberRole(boardId: string, userId: string, request: UpdateBoardMemberRoleRequest): Promise<void> {
+    return firstValueFrom(this.http.patch<void>(`${this.baseUrl}/${boardId}/members/${userId}/role`, request));
   }
 
   removeMember(boardId: string, userId: string): Promise<void> {

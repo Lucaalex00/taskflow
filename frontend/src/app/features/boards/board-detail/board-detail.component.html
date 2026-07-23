@@ -21,30 +21,37 @@
             <li class="member-list__item">
               <span class="color-dot" [style.background]="member.color"></span>
               <span class="member-list__name">{{ member.displayName }}</span>
-              <span class="member-list__role mono">{{ member.role }}</span>
               @if (isOwner()) {
+                <select
+                  class="field__select member-list__role-select"
+                  [ngModel]="member.role"
+                  (ngModelChange)="changeMemberRole(member.userId, $event)"
+                >
+                  <option [value]="BoardRole.Member">Member</option>
+                  <option [value]="BoardRole.Owner">Owner</option>
+                </select>
                 <button class="btn btn--ghost member-list__remove" (click)="removeMember(member.userId)">
                   Remove
                 </button>
+              } @else {
+                <span class="member-list__role mono">{{ member.role }}</span>
               }
             </li>
           }
         </ul>
 
         @if (isOwner()) {
-          <form class="add-member-form" (ngSubmit)="addMember()">
-            <select class="field__select" name="newMemberUserId" [(ngModel)]="newMemberUserId" required>
-              <option value="">— choose user —</option>
-              @for (u of addableUsers(); track u.id) {
-                <option [value]="u.id">{{ u.displayName }} ({{ u.email }})</option>
-              }
-            </select>
-            <select class="field__select" name="newMemberRole" [(ngModel)]="newMemberRole">
-              <option [value]="BoardRole.Member">Member</option>
-              <option [value]="BoardRole.Owner">Owner</option>
-            </select>
-            <button class="btn btn--primary" type="submit" [disabled]="isAddingMember() || !newMemberUserId">
-              {{ isAddingMember() ? 'Adding…' : 'Add' }}
+          <form class="add-member-form" (ngSubmit)="inviteMember()">
+            <input
+              class="field__input"
+              type="email"
+              name="newMemberEmail"
+              [(ngModel)]="newMemberEmail"
+              placeholder="teammate@example.com"
+              required
+            />
+            <button class="btn btn--primary" type="submit" [disabled]="isInvitingMember() || !newMemberEmail">
+              {{ isInvitingMember() ? 'Inviting…' : 'Invite' }}
             </button>
           </form>
         }
@@ -120,27 +127,30 @@
                     <p class="task-card__due mono">due {{ task.dueAtUtc | date: 'MMM d' }}</p>
                   }
 
-                  <label class="assignee-select">
+                  <div class="assignee-display">
                     <span class="field__label">
                       @if (assigneeColor(task)) {
                         <span class="color-dot" [style.background]="assigneeColor(task)"></span>
                       }
                       {{ assigneeName(task) ? 'Assigned to ' + assigneeName(task) : 'Unassigned' }}
                     </span>
-                    <select
-                      class="field__select"
-                      [ngModel]="task.assigneeId ?? ''"
-                      (ngModelChange)="assignTo(task, $event)"
-                    >
-                      <option value="">— choose assignee —</option>
-                      @for (m of members(); track m.userId) {
-                        <option [value]="m.userId">{{ m.displayName }}</option>
-                      }
-                    </select>
-                  </label>
+
+                    @if (isOwner()) {
+                      <select
+                        class="field__select"
+                        [ngModel]="task.assigneeId ?? ''"
+                        (ngModelChange)="assignTo(task, $event)"
+                      >
+                        <option value="">— choose assignee —</option>
+                        @for (m of members(); track m.userId) {
+                          <option [value]="m.userId">{{ m.displayName }}</option>
+                        }
+                      </select>
+                    }
+                  </div>
 
                   <div class="task-card__actions">
-                    @if (!task.assigneeId) {
+                    @if (isOwner() && !task.assigneeId) {
                       <button class="btn btn--ghost" (click)="assignToSelf(task)">Assign to me</button>
                     }
 

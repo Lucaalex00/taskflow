@@ -11,7 +11,7 @@ namespace TaskFlow.UnitTests.Application.Tasks;
 public class AssignTaskCommandHandlerTests
 {
     private static async Task<(TestDbContext Context, Guid BoardId, TaskItem Task)> SeedBoardWithTaskAsync(
-        Guid ownerId)
+        Guid ownerId, Guid? otherMemberId = null)
     {
         var context = new TestDbContext();
         var board = ProjectBoard.Create("Sprint 1", ownerId).Value;
@@ -19,6 +19,8 @@ public class AssignTaskCommandHandlerTests
         context.Boards.Add(board);
         context.Tasks.Add(task);
         context.BoardMembers.Add(BoardMember.Create(board.Id, ownerId, BoardRole.Owner).Value);
+        if (otherMemberId.HasValue)
+            context.BoardMembers.Add(BoardMember.Create(board.Id, otherMemberId.Value, BoardRole.Member).Value);
         await context.SaveChangesAsync();
         return (context, board.Id, task);
     }
@@ -28,7 +30,7 @@ public class AssignTaskCommandHandlerTests
     {
         var ownerId = Guid.NewGuid();
         var (context, boardId, task) = await SeedBoardWithTaskAsync(ownerId);
-        var handler = new AssignTaskCommandHandler(context, new FakeBoardAuthorizer());
+        var handler = new AssignTaskCommandHandler(context, new FakeBoardAuthorizer(), new FakeCurrentUserService(ownerId));
 
         await handler.Handle(new AssignTaskCommand(task.Id, ownerId), CancellationToken.None);
 
@@ -40,11 +42,37 @@ public class AssignTaskCommandHandlerTests
     {
         var ownerId = Guid.NewGuid();
         var (context, _, task) = await SeedBoardWithTaskAsync(ownerId);
-        var handler = new AssignTaskCommandHandler(context, new FakeBoardAuthorizer());
+        var handler = new AssignTaskCommandHandler(context, new FakeBoardAuthorizer(), new FakeCurrentUserService(ownerId));
 
         var act = async () => await handler.Handle(
             new AssignTaskCommand(task.Id, Guid.NewGuid()), CancellationToken.None);
 
         await act.Should().ThrowAsync<ValidationException>();
+    }
+
+    [Fact]
+    public async Task Handle_AssigningToSomeoneElse_CreatesANotificationForThem()
+    {
+        var ownerId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        var (context, _, task) = await SeedBoardWithTaskAsync(ownerId, memberId);
+        var handler = new AssignTaskCommandHandler(context, new FakeBoardAuthorizer(), new FakeCurrentUserService(ownerId));
+
+        await handler.Handle(new AssignTaskCommand(task.Id, memberId), CancellationToken.None);
+
+        context.Notifications.Should().ContainSingle(
+            n => n.RecipientUserId == memberId && n.Type == NotificationType.TaskAssigned);
+    }
+
+    [Fact]
+    public async Task Handle_AssigningToSelf_DoesNotCreateANotification()
+    {
+        var ownerId = Guid.NewGuid();
+        var (context, _, task) = await SeedBoardWithTaskAsync(ownerId);
+        var handler = new AssignTaskCommandHandler(context, new FakeBoardAuthorizer(), new FakeCurrentUserService(ownerId));
+
+        await handler.Handle(new AssignTaskCommand(task.Id, ownerId), CancellationToken.None);
+
+        context.Notifications.Should().BeEmpty();
     }
 }

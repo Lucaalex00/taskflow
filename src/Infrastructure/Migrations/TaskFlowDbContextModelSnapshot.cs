@@ -93,6 +93,46 @@ namespace TaskFlow.Infrastructure.Migrations
                     b.ToTable("alert_rules", (string)null);
                 });
 
+            modelBuilder.Entity("TaskFlow.Domain.Entities.BoardInvitation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BoardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InvitedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InviteeEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<Guid?>("InviteeUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RespondedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InviteeEmail");
+
+                    b.HasIndex("BoardId", "InviteeEmail");
+
+                    b.ToTable("board_invitations", (string)null);
+                });
+
             modelBuilder.Entity("TaskFlow.Domain.Entities.BoardMember", b =>
                 {
                     b.Property<Guid>("Id")
@@ -147,6 +187,47 @@ namespace TaskFlow.Infrastructure.Migrations
                     b.HasIndex("BoardId", "SnapshotAtUtc");
 
                     b.ToTable("load_metrics", (string)null);
+                });
+
+            modelBuilder.Entity("TaskFlow.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BoardId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InvitationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientUserId", "IsRead");
+
+                    b.ToTable("notifications", (string)null);
                 });
 
             modelBuilder.Entity("TaskFlow.Domain.Entities.ProjectBoard", b =>

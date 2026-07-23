@@ -5,6 +5,10 @@
       <span class="brand__name">TASKFLOW</span>
       <span class="brand__tag">workload console</span>
     </a>
+
+    @if (currentUser.isAuthenticated()) {
+      <app-notification-bell />
+    }
   </header>
 
   <main class="shell__main">

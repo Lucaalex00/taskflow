@@ -69,12 +69,23 @@ describe('BoardService', () => {
     expect(await promise).toEqual([member]);
   });
 
-  it('addMember posts the new member request', async () => {
-    const promise = service.addMember('board-1', { userId: 'user-2', role: BoardRole.Member });
+  it('inviteMember posts the invitation request', async () => {
+    const promise = service.inviteMember('board-1', { email: 'teammate@example.com' });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/boards/board-1/members`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/boards/board-1/invitations`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ userId: 'user-2', role: BoardRole.Member });
+    expect(req.request.body).toEqual({ email: 'teammate@example.com' });
+    req.flush(null);
+
+    await promise;
+  });
+
+  it('updateMemberRole patches the member role', async () => {
+    const promise = service.updateMemberRole('board-1', 'user-2', { role: BoardRole.Owner });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/boards/board-1/members/user-2/role`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ role: BoardRole.Owner });
     req.flush(null);
 
     await promise;

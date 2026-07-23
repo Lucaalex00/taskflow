@@ -20,6 +20,8 @@ public sealed class TestDbContext : DbContext, ITaskFlowDbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<ProjectBoard> Boards => Set<ProjectBoard>();
     public DbSet<BoardMember> BoardMembers => Set<BoardMember>();
+    public DbSet<BoardInvitation> BoardInvitations => Set<BoardInvitation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<AlertRule> AlertRules => Set<AlertRule>();
     public DbSet<Alert> Alerts => Set<Alert>();
@@ -38,6 +40,8 @@ public sealed class TestDbContext : DbContext, ITaskFlowDbContext
 
         modelBuilder.Entity<User>().Ignore(x => x.DomainEvents);
         modelBuilder.Entity<BoardMember>().Ignore(x => x.DomainEvents);
+        modelBuilder.Entity<BoardInvitation>().Ignore(x => x.DomainEvents);
+        modelBuilder.Entity<Notification>().Ignore(x => x.DomainEvents);
         modelBuilder.Entity<TaskItem>().Ignore(x => x.DomainEvents);
         modelBuilder.Entity<AlertRule>().Ignore(x => x.DomainEvents);
         modelBuilder.Entity<Alert>().Ignore(x => x.DomainEvents);

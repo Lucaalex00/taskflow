@@ -12,6 +12,8 @@ public interface ITaskFlowDbContext
     DbSet<User> Users { get; }
     DbSet<ProjectBoard> Boards { get; }
     DbSet<BoardMember> BoardMembers { get; }
+    DbSet<BoardInvitation> BoardInvitations { get; }
+    DbSet<Notification> Notifications { get; }
     DbSet<TaskItem> Tasks { get; }
     DbSet<AlertRule> AlertRules { get; }
     DbSet<Alert> Alerts { get; }

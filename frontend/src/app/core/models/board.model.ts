@@ -25,7 +25,10 @@ export interface BoardMemberDto {
   role: BoardRole;
 }
 
-export interface AddBoardMemberRequest {
-  userId: string;
+export interface InviteBoardMemberRequest {
+  email: string;
+}
+
+export interface UpdateBoardMemberRoleRequest {
   role: BoardRole;
 }
