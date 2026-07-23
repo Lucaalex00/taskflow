@@ -5,8 +5,10 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
+import { UserService } from '../../../core/services/user.service';
 import { TaskDto, TaskState, TaskPriority } from '../../../core/models/task.model';
 import { AlertSeverity } from '../../../core/models/alert.model';
+import { UserDto } from '../../../core/models/user.model';
 
 /** Mirrors TaskItem's state machine in the Domain layer (see TaskItem.IsValidTransition). */
 const ALLOWED_TRANSITIONS: Record<TaskState, TaskState[]> = {
@@ -42,6 +44,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   readonly AlertSeverity = AlertSeverity;
 
   readonly tasks = signal<TaskDto[]>([]);
+  readonly users = signal<UserDto[]>([]);
   readonly isLoading = signal(true);
   readonly showCancelled = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -69,6 +72,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly taskService: TaskService,
+    private readonly userService: UserService,
     readonly alertService: AlertService,
     readonly currentUser: CurrentUserService
   ) {
@@ -76,7 +80,11 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.loadTasks(), this.alertService.connectToBoard(this.boardId)]);
+    await Promise.all([
+      this.loadTasks(),
+      this.loadUsers(),
+      this.alertService.connectToBoard(this.boardId)
+    ]);
   }
 
   async ngOnDestroy(): Promise<void> {
@@ -100,12 +108,23 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     const userId = this.currentUser.userId();
     if (!userId) return;
 
+    await this.assignTo(task, userId);
+  }
+
+  async assignTo(task: TaskDto, userId: string): Promise<void> {
+    if (!userId) return;
+
     try {
       await this.taskService.assign(task.id, userId);
       await this.loadTasks();
     } catch {
       this.errorMessage.set(`Could not assign "${task.title}".`);
     }
+  }
+
+  assigneeName(task: TaskDto): string | null {
+    if (!task.assigneeId) return null;
+    return this.users().find((u) => u.id === task.assigneeId)?.displayName ?? 'Unknown user';
   }
 
   async createTask(): Promise<void> {
@@ -151,6 +170,14 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
       this.errorMessage.set('Could not load tasks for this board.');
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  private async loadUsers(): Promise<void> {
+    try {
+      this.users.set(await this.userService.getAll());
+    } catch {
+      // Non-critical: the assignee dropdown just stays empty ("Unassigned" only).
     }
   }
 }

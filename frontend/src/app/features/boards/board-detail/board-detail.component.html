@@ -78,6 +78,22 @@
                     <p class="task-card__due mono">due {{ task.dueAtUtc | date: 'MMM d' }}</p>
                   }
 
+                  <label class="assignee-select">
+                    <span class="field__label">
+                      {{ assigneeName(task) ? 'Assigned to ' + assigneeName(task) : 'Unassigned' }}
+                    </span>
+                    <select
+                      class="field__select"
+                      [ngModel]="task.assigneeId ?? ''"
+                      (ngModelChange)="assignTo(task, $event)"
+                    >
+                      <option value="">— choose assignee —</option>
+                      @for (u of users(); track u.id) {
+                        <option [value]="u.id">{{ u.displayName }}</option>
+                      }
+                    </select>
+                  </label>
+
                   <div class="task-card__actions">
                     @if (!task.assigneeId) {
                       <button class="btn btn--ghost" (click)="assignToSelf(task)">Assign to me</button>

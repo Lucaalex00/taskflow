@@ -179,6 +179,21 @@
   margin: 0;
 }
 
+.assignee-select {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assignee-select .field__label {
+  font-size: 10px;
+}
+
+.assignee-select .field__select {
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
 .task-card__actions {
   display: flex;
   flex-wrap: wrap;

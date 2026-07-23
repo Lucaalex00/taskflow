@@ -5,11 +5,14 @@ import { BoardDetailComponent } from './board-detail.component';
 import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
+import { UserService } from '../../../core/services/user.service';
 import { TaskDto, TaskPriority, TaskState } from '../../../core/models/task.model';
 import { AlertDto, AlertSeverity } from '../../../core/models/alert.model';
+import { UserDto } from '../../../core/models/user.model';
 
 describe('BoardDetailComponent', () => {
   let taskService: jasmine.SpyObj<TaskService>;
+  let userService: jasmine.SpyObj<UserService>;
   let alertService: {
     alerts: ReturnType<typeof signal<AlertDto[]>>;
     connectToBoard: jasmine.Spy;
@@ -32,6 +35,12 @@ describe('BoardDetailComponent', () => {
     updatedAtUtc: '2026-01-01T00:00:00Z'
   };
 
+  const user: UserDto = {
+    id: 'user-1',
+    displayName: 'Ada',
+    email: 'ada@example.com'
+  };
+
   const alert: AlertDto = {
     id: 'alert-1',
     boardId: 'board-1',
@@ -49,6 +58,8 @@ describe('BoardDetailComponent', () => {
       'transitionState',
       'assign'
     ]);
+    userService = jasmine.createSpyObj<UserService>('UserService', ['getAll']);
+    userService.getAll.and.resolveTo([]);
     alertService = {
       alerts: signal<AlertDto[]>([]),
       connectToBoard: jasmine.createSpy('connectToBoard').and.resolveTo(undefined),
@@ -63,6 +74,7 @@ describe('BoardDetailComponent', () => {
       imports: [BoardDetailComponent],
       providers: [
         { provide: TaskService, useValue: taskService },
+        { provide: UserService, useValue: userService },
         { provide: AlertService, useValue: alertService },
         { provide: CurrentUserService, useValue: currentUser },
         {
@@ -82,16 +94,30 @@ describe('BoardDetailComponent', () => {
     expect(component.boardId).toBe('board-1');
   });
 
-  it('loads tasks and connects to the alerts hub on init', async () => {
+  it('loads tasks, users and connects to the alerts hub on init', async () => {
     const { component } = createComponent();
     taskService.getBoardTasks.and.resolveTo([task]);
+    userService.getAll.and.resolveTo([user]);
 
     await component.ngOnInit();
 
     expect(taskService.getBoardTasks).toHaveBeenCalledWith('board-1');
+    expect(userService.getAll).toHaveBeenCalled();
     expect(alertService.connectToBoard).toHaveBeenCalledWith('board-1');
     expect(component.tasks()).toEqual([task]);
+    expect(component.users()).toEqual([user]);
     expect(component.isLoading()).toBeFalse();
+  });
+
+  it('silently ignores a failure to load users, keeping the assignee list empty', async () => {
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([]);
+    userService.getAll.and.rejectWith(new Error('boom'));
+
+    await component.ngOnInit();
+
+    expect(component.users()).toEqual([]);
+    expect(component.errorMessage()).toBeNull();
   });
 
   it('sets an error message when loading tasks fails', async () => {
@@ -151,6 +177,45 @@ describe('BoardDetailComponent', () => {
     await component.assignToSelf(task);
 
     expect(taskService.assign).toHaveBeenCalledWith('task-1', 'user-1');
+  });
+
+  it('assignTo assigns the task to the chosen user and reloads the board', async () => {
+    const { component } = createComponent();
+    taskService.assign.and.resolveTo(undefined);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.assignTo(task, 'user-2');
+
+    expect(taskService.assign).toHaveBeenCalledWith('task-1', 'user-2');
+    expect(taskService.getBoardTasks).toHaveBeenCalled();
+  });
+
+  it('assignTo does nothing when no user is chosen', async () => {
+    const { component } = createComponent();
+
+    await component.assignTo(task, '');
+
+    expect(taskService.assign).not.toHaveBeenCalled();
+  });
+
+  it('assignTo sets an error message when it fails', async () => {
+    const { component } = createComponent();
+    taskService.assign.and.rejectWith(new Error('boom'));
+
+    await component.assignTo(task, 'user-2');
+
+    expect(component.errorMessage()).toContain('Could not assign');
+  });
+
+  it('assigneeName resolves the display name from the loaded users, or null when unassigned', async () => {
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([]);
+    userService.getAll.and.resolveTo([user]);
+    await component.ngOnInit();
+
+    expect(component.assigneeName(task)).toBeNull();
+    expect(component.assigneeName({ ...task, assigneeId: 'user-1' })).toBe('Ada');
+    expect(component.assigneeName({ ...task, assigneeId: 'unknown' })).toBe('Unknown user');
   });
 
   it('createTask creates the task, resets the form and reloads the board', async () => {

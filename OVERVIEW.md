@@ -209,6 +209,5 @@ docker compose logs api -f     # tail API logs (Serilog output)
 ## 5. Future work (explicitly out of scope for v1)
 
 - Real authentication (`CurrentUserService` is demo-scope, no password/JWT)
-- Assigning tasks to a specific user other than "self" from the UI (the API supports it; the UI only exposes "assign to me")
 
-See [`docs/2026-07-23-frontend-tests-and-ci-fixes.md`](docs/2026-07-23-frontend-tests-and-ci-fixes.md) for the frontend unit test suite added (previously missing) and two real bugs it uncovered in CI, and [`docs/2026-07-23-task-completed-event-dispatch.md`](docs/2026-07-23-task-completed-event-dispatch.md) for how `TaskCompletedEvent` is now dispatched to a real handler.
+See [`docs/2026-07-23-frontend-tests-and-ci-fixes.md`](docs/2026-07-23-frontend-tests-and-ci-fixes.md) for the frontend unit test suite added (previously missing) and two real bugs it uncovered in CI, [`docs/2026-07-23-task-completed-event-dispatch.md`](docs/2026-07-23-task-completed-event-dispatch.md) for how `TaskCompletedEvent` is now dispatched to a real handler, and [`docs/2026-07-23-assign-task-to-any-user-in-ui.md`](docs/2026-07-23-assign-task-to-any-user-in-ui.md) for assigning tasks to any user from the UI.

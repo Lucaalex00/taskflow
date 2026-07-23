@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using TaskFlow.Application.Users;
 using TaskFlow.Application.Users.Commands.CreateUser;
+using TaskFlow.Application.Users.Queries.GetUsers;
 
 namespace TaskFlow.Api.Controllers;
 
@@ -8,6 +10,15 @@ namespace TaskFlow.Api.Controllers;
 [Route("api/users")]
 public sealed class UsersController(ISender sender) : ControllerBase
 {
+    /// <summary>Lists every registered user, so the UI can offer "assign to..." choices.</summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyList<UserDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    {
+        var users = await sender.Send(new GetUsersQuery(), cancellationToken);
+        return Ok(users);
+    }
+
     /// <summary>Registers a new user.</summary>
     [HttpPost]
     [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
