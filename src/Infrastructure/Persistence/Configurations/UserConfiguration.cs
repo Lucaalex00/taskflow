@@ -19,5 +19,8 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.PasswordHash).HasMaxLength(200).IsRequired();
         builder.Property(u => u.Color).HasMaxLength(7).IsRequired();
         builder.Property(u => u.CreatedAtUtc).IsRequired();
+
+        builder.Property(u => u.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
+        builder.Property(u => u.LockoutEndUtc);
     }
 }

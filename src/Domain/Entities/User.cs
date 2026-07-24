@@ -20,6 +20,14 @@ public class User : Entity
 
     public DateTime CreatedAtUtc { get; private set; }
 
+    /// <summary>Consecutive failed login attempts since the last successful login. Reset to 0
+    /// on any successful login. Drives temporary lockout (see <see cref="RegisterFailedLogin"/>).</summary>
+    public int FailedLoginAttempts { get; private set; }
+
+    /// <summary>When set and in the future, the account is temporarily locked and logins are
+    /// refused even with the correct password. Null once the window passes or on success.</summary>
+    public DateTime? LockoutEndUtc { get; private set; }
+
     private User() { } // EF Core
 
     private User(string email, string displayName, string passwordHash)
@@ -49,5 +57,30 @@ public class User : Entity
     {
         if (!string.IsNullOrWhiteSpace(newDisplayName))
             DisplayName = newDisplayName.Trim();
+    }
+
+    /// <summary>True while a lockout window is active. Callers must refuse login when this
+    /// returns true, regardless of whether the supplied password is correct.</summary>
+    public bool IsLockedOut(DateTime nowUtc) => LockoutEndUtc is { } end && end > nowUtc;
+
+    /// <summary>Records a failed login attempt. Once <paramref name="maxAttempts"/> consecutive
+    /// failures are reached, the account is locked for <paramref name="lockoutDuration"/> and
+    /// the counter resets, so the next window starts fresh after the lockout expires.</summary>
+    public void RegisterFailedLogin(DateTime nowUtc, int maxAttempts, TimeSpan lockoutDuration)
+    {
+        FailedLoginAttempts++;
+
+        if (FailedLoginAttempts >= maxAttempts)
+        {
+            LockoutEndUtc = nowUtc.Add(lockoutDuration);
+            FailedLoginAttempts = 0;
+        }
+    }
+
+    /// <summary>Clears the failed-attempt counter and any lockout after a successful login.</summary>
+    public void RegisterSuccessfulLogin()
+    {
+        FailedLoginAttempts = 0;
+        LockoutEndUtc = null;
     }
 }

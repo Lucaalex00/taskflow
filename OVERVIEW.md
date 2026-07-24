@@ -70,8 +70,8 @@ testable and understandable without knowing anything about EF Core, MediatR, or 
 ## 2. Modules
 
 ### 2.1 `Domain` — business rules with zero infrastructure dependencies
-- **Entities**: `User`, `ProjectBoard`, `BoardMember`, `BoardInvitation`, `Notification`,
-  `TaskItem`, `AlertRule`, `Alert`, `LoadMetric`
+- **Entities**: `User` (with failed-login-attempt tracking + temporary lockout), `ProjectBoard`,
+  `BoardMember`, `BoardInvitation`, `Notification`, `TaskItem`, `AlertRule`, `Alert`, `LoadMetric`
 - **`TaskItem`'s state machine**: `Todo -> InProgress -> {Blocked, Done, Cancelled}`, enforced
   by `IsValidTransition` — no handler or UI can force an invalid transition
 - **`BoardInvitation`'s lifecycle**: `Pending -> {Accepted, Declined}` via `InvitationStatus`,
@@ -169,11 +169,11 @@ One folder per aggregate, one subfolder per use case:
 - **`UnitTests/Application`**: handler tests for every command/query above (including
   Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case) and
   validator tests (e.g. `CreateUserCommandValidatorTests` for the password policy) against an
-  EF Core InMemory-backed fake context — **109 tests**
+  EF Core InMemory-backed fake context — **112 tests**
 - **`IntegrationTests`**: full HTTP round-trips against a real, disposable Postgres
   container — auth (register/login), the login/register rate limiter, security headers, board
   membership/roles, invitations, notifications, task creation/assignment authorization,
-  SignalR hub authentication/board-membership checks — **24 tests**
+  SignalR hub authentication/board-membership checks, per-account lockout — **26 tests**
 - **`e2e`** (Playwright, `@playwright/test`): drives real Chromium browsers against the actual
   Docker stack (not a mocked backend) — auth redirects, register/sign-out/sign-in, wrong
   password, board creation, and a two-browser-context walk through the full owner/member
@@ -297,3 +297,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-docker-hardening.md`](docs/2026-07-24-docker-hardening.md) — non-root frontend container, restart policies, resource limits, and Trivy image scanning in CI
 - [`docs/2026-07-24-security-headers.md`](docs/2026-07-24-security-headers.md) — defensive HTTP headers on API + frontend, and a latent test-isolation bug it surfaced (integration tests were hitting the wrong Postgres)
 - [`docs/2026-07-24-stronger-password-policy.md`](docs/2026-07-24-stronger-password-policy.md) — a real password policy enforced server-side and mirrored by a live requirements checklist in the registration form
+- [`docs/2026-07-24-account-lockout.md`](docs/2026-07-24-account-lockout.md) — temporary per-account lockout after repeated failed logins, complementing the per-IP rate limiter

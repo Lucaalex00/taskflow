@@ -1,6 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 
@@ -73,14 +74,27 @@ export class LoginComponent {
       }
 
       await this.router.navigateByUrl('/');
-    } catch {
-      this.errorMessage.set(
-        this.mode() === 'login'
-          ? 'Invalid email or password.'
-          : 'Could not create your account. Check the email format and password requirements.'
-      );
+    } catch (error) {
+      this.errorMessage.set(this.messageFor(error));
     } finally {
       this.isSubmitting.set(false);
     }
+  }
+
+  /** The account-lockout case (too many failed logins) returns a specific server message worth
+   * surfacing verbatim, so the user understands it's a temporary lock rather than wrong
+   * credentials. Everything else stays intentionally vague. */
+  private messageFor(error: unknown): string {
+    if (this.mode() === 'login' && error instanceof HttpErrorResponse) {
+      const detail = error.error?.detail as string | undefined;
+      if (error.status === 401 && detail?.toLowerCase().includes('locked')) {
+        return detail;
+      }
+      return 'Invalid email or password.';
+    }
+
+    return this.mode() === 'login'
+      ? 'Invalid email or password.'
+      : 'Could not create your account. Check the email format and password requirements.';
   }
 }
