@@ -125,6 +125,9 @@ One folder per aggregate, one subfolder per use case:
 ### 2.4 `Api` — HTTP surface
 - **Controllers**: `AuthController`, `UsersController`, `BoardsController`,
   `InvitationsController`, `NotificationsController`, `TasksController`, `AlertsController`
+- **`Middleware/SecurityHeadersMiddleware`**: adds defensive response headers (strict CSP,
+  HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) to every
+  response, registered first so it also covers error responses
 - **`Middleware/ExceptionHandlingMiddleware`**: converts `NotFoundException` -> 404,
   `ValidationException` -> 400, `ForbiddenException` -> 403, anything else -> 500, all as
   RFC 7807 `ProblemDetails`
@@ -166,9 +169,9 @@ One folder per aggregate, one subfolder per use case:
   Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case)
   against an EF Core InMemory-backed fake context — **104 tests**
 - **`IntegrationTests`**: full HTTP round-trips against a real, disposable Postgres
-  container — auth (register/login), the login/register rate limiter, board membership/roles,
-  invitations, notifications, task creation/assignment authorization, SignalR hub
-  authentication/board-membership checks — **20 tests**
+  container — auth (register/login), the login/register rate limiter, security headers, board
+  membership/roles, invitations, notifications, task creation/assignment authorization,
+  SignalR hub authentication/board-membership checks — **24 tests**
 - **`e2e`** (Playwright, `@playwright/test`): drives real Chromium browsers against the actual
   Docker stack (not a mocked backend) — auth redirects, register/sign-out/sign-in, wrong
   password, board creation, and a two-browser-context walk through the full owner/member
@@ -290,3 +293,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-playwright-e2e-suite.md`](docs/2026-07-24-playwright-e2e-suite.md) — a real-browser end-to-end test tier against the full Docker stack, and a real UX gap it surfaced (the owner's member list doesn't refresh live)
 - [`docs/2026-07-24-live-member-list-and-invite-feedback.md`](docs/2026-07-24-live-member-list-and-invite-feedback.md) — fixed that gap (the member list now polls, like notifications already do) and added an explicit "Invitation sent" confirmation
 - [`docs/2026-07-24-docker-hardening.md`](docs/2026-07-24-docker-hardening.md) — non-root frontend container, restart policies, resource limits, and Trivy image scanning in CI
+- [`docs/2026-07-24-security-headers.md`](docs/2026-07-24-security-headers.md) — defensive HTTP headers on API + frontend, and a latent test-isolation bug it surfaced (integration tests were hitting the wrong Postgres)

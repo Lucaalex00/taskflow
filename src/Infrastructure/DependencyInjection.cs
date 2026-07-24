@@ -15,10 +15,19 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Postgres")
-            ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Postgres' configuration value.");
-
-        services.AddDbContext<TaskFlowDbContext>(options => options.UseNpgsql(connectionString));
+        // Resolved lazily from DI (not captured from `configuration` here) so this reflects
+        // whatever IConfiguration ends up registered for the running host — critically,
+        // including overrides WebApplicationFactory adds in integration tests. Capturing a
+        // plain string from `configuration` at this point would silently freeze on whatever
+        // ConnectionStrings:Postgres was BEFORE those test-only overrides are layered in,
+        // since ConfigureWebHost's ConfigureAppConfiguration only affects the final merged
+        // configuration, not this `configuration` reference itself.
+        services.AddDbContext<TaskFlowDbContext>((sp, options) =>
+        {
+            var connectionString = sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres")
+                ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Postgres' configuration value.");
+            options.UseNpgsql(connectionString);
+        });
         services.AddScoped<ITaskFlowDbContext>(sp => sp.GetRequiredService<TaskFlowDbContext>());
 
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();

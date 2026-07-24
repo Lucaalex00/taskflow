@@ -40,11 +40,13 @@ test('owner invites a teammate who accepts, gets assigned a task, and cannot cre
   await expect(memberPage.getByText(`invited to join the board "${boardName}"`)).toBeVisible();
   await memberPage.getByRole('button', { name: 'Accept', exact: true }).click();
 
-  // Owner's member list was fetched before the teammate accepted, so it doesn't know about
-  // them yet — reload to pick up the now-accepted membership before assigning.
-  await ownerPage.reload();
+  // Wait for the teammate's own board list to include the newly-joined board — that only
+  // happens after the accept has committed server-side, so it's a reliable signal that the
+  // owner's member list (once refreshed) will now include them.
+  await memberPage.locator('.notification-bell__toggle').click();
+  await expect(memberPage.locator('.board-card', { hasText: boardName })).toBeVisible();
 
-  // Owner creates a task and assigns it to the teammate.
+  // Owner creates a task (doesn't need the member yet).
   await ownerPage.getByRole('button', { name: '+ New task' }).click();
   const taskTitle = `Draft the launch plan ${Date.now()}`;
   await ownerPage.getByLabel('Title').fill(taskTitle);
@@ -52,14 +54,20 @@ test('owner invites a teammate who accepts, gets assigned a task, and cannot cre
 
   const taskCard = ownerPage.locator('.task-card', { hasText: taskTitle });
   await expect(taskCard).toBeVisible();
-  await taskCard.locator('select').selectOption({ label: member.displayName });
-  await expect(taskCard.getByText(`Assigned to ${member.displayName}`)).toBeVisible();
 
-  // Teammate opens the newly-joined board (it shows up in their list without a page reload —
-  // see docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md) and sees the
-  // assigned task.
-  await memberPage.locator('.notification-bell__toggle').click();
-  await expect(memberPage.locator('.board-card', { hasText: boardName })).toBeVisible();
+  // The owner's member list is fetched on load (and polled every 20s), so the just-accepted
+  // teammate may not be in the assignee dropdown yet. Reload until the option appears rather
+  // than racing a single reload against the accept's commit.
+  await expect(async () => {
+    await ownerPage.reload();
+    const card = ownerPage.locator('.task-card', { hasText: taskTitle });
+    await card.locator('select').selectOption({ label: member.displayName });
+    await expect(card.getByText(`Assigned to ${member.displayName}`)).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15_000 });
+
+  // Teammate opens the newly-joined board (already visible in their list from the accept
+  // above — see docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md) and
+  // sees the assigned task.
   await memberPage.locator('.board-card', { hasText: boardName }).click();
   const memberTaskCard = memberPage.locator('.task-card', { hasText: taskTitle });
   await expect(memberTaskCard).toBeVisible();

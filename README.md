@@ -58,6 +58,8 @@ the test suite to back every one of them up.
 - Password registration/login with PBKDF2-HMAC-SHA256 hashing and JWT bearer tokens —
   every endpoint requires authentication, including the SignalR hub itself.
 - Login/register are rate-limited per IP against brute-force/credential-stuffing attempts.
+- Defensive HTTP headers on every response (strict CSP, HSTS, X-Frame-Options,
+  X-Content-Type-Options, Referrer-Policy) on both the API and the nginx-served frontend.
 - Board-scoped **Owner / Member** roles, enforced consistently through a single
   `IBoardAuthorizer` abstraction: only Owners create tasks, assign them, manage membership,
   and configure alert rules; Members can still move their own assigned tasks through the
@@ -80,7 +82,7 @@ the test suite to back every one of them up.
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **213 automated tests** — 104 backend unit, 20 backend integration (against a real,
+- **217 automated tests** — 104 backend unit, 24 backend integration (against a real,
   disposable Postgres container via Testcontainers), 83 frontend, 6 end-to-end (Playwright,
   driving two real browser contexts through the full owner/member workflow against the actual
   Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and a
@@ -238,7 +240,7 @@ cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwrigh
 | Suite | Count | What it covers |
 |---|---|---|
 | Backend unit | 104 | Domain rules (state machines, validation, color palette), CQRS handlers against an EF Core InMemory context |
-| Backend integration | 20 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, board membership/roles, invitations, notifications, SignalR hub authorization |
+| Backend integration | 24 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, security headers, board membership/roles, invitations, notifications, SignalR hub authorization |
 | Frontend | 83 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
 | End-to-end | 6 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 

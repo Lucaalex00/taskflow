@@ -138,6 +138,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // --- Middleware pipeline ---------------------------------------------------
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
