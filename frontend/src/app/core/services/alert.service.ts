@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import * as signalR from '@microsoft/signalr';
 import { environment } from '../../../environments/environment';
 import { AlertDto, RealtimeAlert } from '../models/alert.model';
+import { CurrentUserService } from './current-user.service';
 
 @Injectable({ providedIn: 'root' })
 export class AlertService {
@@ -15,7 +16,10 @@ export class AlertService {
   readonly alerts = signal<AlertDto[]>([]);
   readonly connectionState = signal<signalR.HubConnectionState>(signalR.HubConnectionState.Disconnected);
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly currentUser: CurrentUserService
+  ) {}
 
   async getBoardAlerts(boardId: string, unreadOnly = false): Promise<AlertDto[]> {
     return firstValueFrom(
@@ -37,7 +41,9 @@ export class AlertService {
   async connectToBoard(boardId: string): Promise<void> {
     if (!this.hubConnection) {
       this.hubConnection = new signalR.HubConnectionBuilder()
-        .withUrl(environment.hubUrl)
+        .withUrl(environment.hubUrl, {
+          accessTokenFactory: () => this.currentUser.token() ?? ''
+        })
         .withAutomaticReconnect()
         .build();
 
