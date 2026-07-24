@@ -24,10 +24,15 @@ resource usage, and CI never scanned the published images for known vulnerabilit
   one container (e.g. a memory leak) could exhaust the host and take down its neighbors too.
 - **Vulnerability scanning in CI**: the `docker` job now runs Trivy against both published
   images (API and frontend) after pushing them to GHCR, reporting CRITICAL/HIGH CVEs (OS
-  packages + .NET/npm dependencies) to the repo's Security tab via SARIF upload. Deliberately
-  non-blocking (`exit-code: '0'`) — a demo project shouldn't go red over a CVE in an upstream
-  base image nobody's shipped a fix for yet, but it should still be visible to whoever's
-  reviewing the repo.
+  packages + .NET/npm dependencies) as a table printed to the job log and uploaded as a build
+  artifact. Deliberately non-blocking (`exit-code: '0'`) — a demo project shouldn't go red over
+  a CVE in an upstream base image nobody's shipped a fix for yet, but it should still be visible
+  to whoever's reviewing the repo.
+  - *Note:* an earlier version uploaded the results to the repo's Security tab via SARIF, which
+    required `security-events: write` on the job. That permission made the job fail at "Set up
+    job" (the token can't be minted with a code-scanning scope unless the feature is enabled on
+    the repo), so it was switched to the log-table + artifact approach, which needs no special
+    permission and works on any repo.
 
 ## Verification
 

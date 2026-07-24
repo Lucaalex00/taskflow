@@ -151,7 +151,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      security-events: write
 
     steps:
       - uses: actions/checkout@v4
@@ -190,16 +189,18 @@ jobs:
             ghcr.io/${{ steps.image.outputs.repository }}/frontend:latest
             ghcr.io/${{ steps.image.outputs.repository }}/frontend:${{ github.sha }}
 
-      # Reports HIGH/CRITICAL CVEs in each published image (OS packages + .NET/npm
-      # dependencies) to the repo's Security tab. Non-blocking (exit-code 0) — a demo
-      # project shouldn't go red over a CVE in an upstream base image nobody's shipped a
-      # fix for yet, but it should still be visible.
+      # Scans each published image for HIGH/CRITICAL CVEs (OS packages + .NET/npm
+      # dependencies). Prints a readable table to the job log and saves it as a build
+      # artifact — deliberately NOT uploaded to the Security tab, so it needs no
+      # security-events permission or code-scanning setup (requesting that permission was what
+      # broke the job at setup). Non-blocking (exit-code 0): a demo shouldn't go red over a CVE
+      # in an upstream base image nobody's shipped a fix for yet, but it should stay visible.
       - name: Scan API image for vulnerabilities
         uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: ghcr.io/${{ steps.image.outputs.repository }}/api:${{ github.sha }}
-          format: sarif
-          output: trivy-api.sarif
+          format: table
+          output: trivy-api.txt
           severity: CRITICAL,HIGH
           exit-code: '0'
 
@@ -207,14 +208,21 @@ jobs:
         uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: ghcr.io/${{ steps.image.outputs.repository }}/frontend:${{ github.sha }}
-          format: sarif
-          output: trivy-frontend.sarif
+          format: table
+          output: trivy-frontend.txt
           severity: CRITICAL,HIGH
           exit-code: '0'
 
-      - name: Upload vulnerability scan results
+      - name: Show scan results in the log
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        run: |
+          echo "::group::Trivy — API image"; cat trivy-api.txt || true; echo "::endgroup::"
+          echo "::group::Trivy — frontend image"; cat trivy-frontend.txt || true; echo "::endgroup::"
+
+      - name: Upload vulnerability scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: .
-          category: trivy
+          name: trivy-reports
+          path: trivy-*.txt
+          retention-days: 7
