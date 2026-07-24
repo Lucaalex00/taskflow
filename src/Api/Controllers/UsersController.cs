@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TaskFlow.Application.Users;
 using TaskFlow.Application.Users.Commands.CreateUser;
 using TaskFlow.Application.Users.Queries.GetUsers;
@@ -24,6 +25,7 @@ public sealed class UsersController(ISender sender) : ControllerBase
     /// <summary>Registers a new user and logs them in immediately, returning a JWT.</summary>
     [HttpPost]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResult), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create(CreateUserCommand command, CancellationToken cancellationToken)

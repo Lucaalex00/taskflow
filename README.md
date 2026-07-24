@@ -56,7 +56,8 @@ the test suite to back every one of them up.
 
 **Real authentication & authorization**
 - Password registration/login with PBKDF2-HMAC-SHA256 hashing and JWT bearer tokens —
-  every endpoint requires authentication.
+  every endpoint requires authentication, including the SignalR hub itself.
+- Login/register are rate-limited per IP against brute-force/credential-stuffing attempts.
 - Board-scoped **Owner / Member** roles, enforced consistently through a single
   `IBoardAuthorizer` abstraction: only Owners create tasks, assign them, manage membership,
   and configure alert rules; Members can still move their own assigned tasks through the
@@ -79,7 +80,7 @@ the test suite to back every one of them up.
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **202 automated tests** — 104 backend unit, 16 backend integration (against a real,
+- **206 automated tests** — 104 backend unit, 20 backend integration (against a real,
   disposable Postgres container via Testcontainers), 82 frontend — plus a GitHub Actions
   pipeline that runs all of them, plus lint and a production build, on every push.
 
@@ -231,7 +232,7 @@ npx ng lint
 | Suite | Count | What it covers |
 |---|---|---|
 | Backend unit | 104 | Domain rules (state machines, validation, color palette), CQRS handlers against an EF Core InMemory context |
-| Backend integration | 16 | Full HTTP round-trips against a real Postgres container: auth, board membership/roles, invitations, notifications |
+| Backend integration | 20 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, board membership/roles, invitations, notifications, SignalR hub authorization |
 | Frontend | 82 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
 
 ## Project structure

@@ -7,11 +7,11 @@ using Xunit;
 namespace TaskFlow.IntegrationTests;
 
 /// <summary>
-/// Spins up a real, disposable Postgres container per test run and points the API
-/// at it — no mocked database, so integration tests exercise the actual EF Core
-/// mappings, migrations and SQL that will run in production.
+/// Same shape as <see cref="TaskFlowApiFactory"/>, but keeps the real (low) auth rate limit
+/// from appsettings.json instead of relaxing it — used only by the test that verifies the
+/// limiter actually rejects requests once the limit is hit.
 /// </summary>
-public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public sealed class RateLimitedApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16-alpine")
@@ -27,8 +27,9 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>, IAsyncL
             configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Postgres"] = _postgres.GetConnectionString(),
-                ["LoadMonitor:IntervalSeconds"] = "3600", // don't let the worker interfere mid-test
-                ["RateLimiting:Auth:PermitLimit"] = "1000" // tests register far more users/minute than a real client would
+                ["LoadMonitor:IntervalSeconds"] = "3600",
+                ["RateLimiting:Auth:PermitLimit"] = "3",
+                ["RateLimiting:Auth:WindowSeconds"] = "60"
             });
         });
     }

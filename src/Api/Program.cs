@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -86,6 +88,34 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// Throttle login/register per client IP so a brute-force credential-stuffing script can't
+// hammer these anonymous endpoints — every other endpoint already requires a valid JWT.
+// Limit is configurable (see "RateLimiting:Auth" in appsettings) so integration tests, which
+// legitimately register far more than a real client would in a minute, can relax it. Read via
+// httpContext.RequestServices (not the `builder.Configuration` captured above) so this reflects
+// the fully-built configuration, including any overrides WebApplicationFactory adds in tests.
+const string AuthRateLimiterPolicy = "auth";
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(AuthRateLimiterPolicy, httpContext =>
+    {
+        var config = httpContext.RequestServices.GetRequiredService<IConfiguration>();
+        var section = config.GetSection("RateLimiting:Auth");
+        var permitLimit = section.GetValue("PermitLimit", 10);
+        var windowSeconds = section.GetValue("WindowSeconds", 60);
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromSeconds(windowSeconds),
+                PermitLimit = permitLimit,
+                QueueLimit = 0
+            });
+    });
+});
+
 const string AngularDevCorsPolicy = "AngularDev";
 builder.Services.AddCors(options =>
 {
@@ -121,6 +151,7 @@ app.UseCors(AngularDevCorsPolicy);
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 app.MapHub<AlertsHub>("/hubs/alerts");

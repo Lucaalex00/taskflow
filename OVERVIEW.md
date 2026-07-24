@@ -166,8 +166,9 @@ One folder per aggregate, one subfolder per use case:
   Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case)
   against an EF Core InMemory-backed fake context — **104 tests**
 - **`IntegrationTests`**: full HTTP round-trips against a real, disposable Postgres
-  container — auth (register/login), board membership/roles, invitations, notifications,
-  task creation/assignment authorization — **16 tests**
+  container — auth (register/login), the login/register rate limiter, board membership/roles,
+  invitations, notifications, task creation/assignment authorization, SignalR hub
+  authentication/board-membership checks — **20 tests**
 
 ### 2.7 Infrastructure-as-config
 - **`docker-compose.yml`**: orchestrates `postgres`, `api`, `frontend`
@@ -180,9 +181,11 @@ One folder per aggregate, one subfolder per use case:
 
 ## 3. Key features (functional summary)
 
-1. **Real authentication & authorization**: JWT bearer login/registration; board-scoped
-   Owner/Member roles enforced through a single `IBoardAuthorizer` chokepoint — only Owners
-   create tasks, assign them, manage membership, and configure alert rules
+1. **Real authentication & authorization**: JWT bearer login/registration (rate-limited per
+   IP against brute-force attempts); board-scoped Owner/Member roles enforced through a single
+   `IBoardAuthorizer` chokepoint — only Owners create tasks, assign them, manage membership,
+   and configure alert rules; the SignalR hub itself requires the same JWT and re-checks board
+   membership before letting a connection join a board's alert group
 2. **Invitations & notifications**: Owners invite teammates by email (works even if they
    haven't registered yet); invitees get a real in-app notification and must accept before
    joining; a notification center also surfaces task assignments and state changes, never
@@ -251,10 +254,10 @@ docker compose logs api -f     # tail API logs (Serilog output)
 
 - Renaming or deleting a board (the domain model supports renaming internally, but no
   command/endpoint exposes it yet; deletion isn't modeled at all)
-- Authenticating the SignalR connection itself (`AlertsHub` currently accepts any connection
-  that knows a board id — REST endpoints are fully JWT-protected, but the hub is not)
 - Promoting/demoting a member beyond `UpdateBoardMemberRole`'s Owner/Member toggle (e.g. a
   finer-grained permission model, or transferring board ownership)
+- A hosted, one-click live demo (today the project is Docker-first: `docker compose up
+  --build` is the fastest path to trying it)
 
 ## 6. Feature history
 
@@ -270,3 +273,5 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-23-board-and-user-colors.md`](docs/2026-07-23-board-and-user-colors.md) — the color palette and per-board/user accent colors
 - [`docs/2026-07-23-invitations-notifications-and-owner-only-assignment.md`](docs/2026-07-23-invitations-notifications-and-owner-only-assignment.md) — email invitations, the notification center, Owner-only task assignment
 - [`docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md`](docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md) — Owner-only task creation, the board-list live-refresh bug fix, and "created by" display
+- [`docs/2026-07-24-secure-signalr-hub-with-jwt-and-board-membership.md`](docs/2026-07-24-secure-signalr-hub-with-jwt-and-board-membership.md) — JWT-authenticated the SignalR hub and enforced board membership on `JoinBoard`
+- [`docs/2026-07-24-rate-limit-login-and-register.md`](docs/2026-07-24-rate-limit-login-and-register.md) — per-IP rate limiting on the two anonymous endpoints

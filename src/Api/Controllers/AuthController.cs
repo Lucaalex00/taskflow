@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TaskFlow.Application.Users;
 using TaskFlow.Application.Users.Commands.Login;
 
@@ -13,6 +14,7 @@ public sealed class AuthController(ISender sender) : ControllerBase
 {
     /// <summary>Logs in with an email/password, returning a JWT for subsequent requests.</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken)
