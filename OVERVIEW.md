@@ -70,24 +70,35 @@ testable and understandable without knowing anything about EF Core, MediatR, or 
 ## 2. Modules
 
 ### 2.1 `Domain` — business rules with zero infrastructure dependencies
-- **Entities**: `User`, `ProjectBoard`, `TaskItem`, `AlertRule`, `Alert`, `LoadMetric`
+- **Entities**: `User`, `ProjectBoard`, `BoardMember`, `BoardInvitation`, `Notification`,
+  `TaskItem`, `AlertRule`, `Alert`, `LoadMetric`
 - **`TaskItem`'s state machine**: `Todo -> InProgress -> {Blocked, Done, Cancelled}`, enforced
   by `IsValidTransition` — no handler or UI can force an invalid transition
+- **`BoardInvitation`'s lifecycle**: `Pending -> {Accepted, Declined}` via `InvitationStatus`,
+  enforced the same way — a resolved invitation can't be re-answered
+- **`BoardRole`**: `Owner` / `Member`, held per `BoardMember` row (a user can be Owner of one
+  board and Member of another)
 - **`Result<T>`**: explicit success/failure return type for expected business-rule
   failures, avoiding exceptions for control flow
-- **Domain events**: `TaskCompletedEvent`, raised (not yet dispatched — see "Future work")
-  when a task transitions to `Done`
+- **Domain events**: `TaskCompletedEvent`, raised when a task transitions to `Done` and
+  dispatched through a real MediatR-based mechanism (see
+  [`docs/2026-07-23-task-completed-event-dispatch.md`](docs/2026-07-23-task-completed-event-dispatch.md))
 
 ### 2.2 `Application` — CQRS use cases
 One folder per aggregate, one subfolder per use case:
-- **`Tasks`**: `CreateTask`, `TransitionTaskState`, `AssignTask`, `GetBoardTasks`
-- **`Boards`**: `CreateBoard`, `GetBoards`
+- **`Tasks`**: `CreateTask` (Owner-only), `TransitionTaskState`, `AssignTask` (Owner-only),
+  `GetBoardTasks`
+- **`Boards`**: `CreateBoard`, `GetBoards`, `InviteBoardMember`, `RespondToBoardInvitation`,
+  `UpdateBoardMemberRole`, `RemoveBoardMember`, `GetBoardMembers`
+- **`Notifications`**: `GetNotifications`, `MarkNotificationRead`
 - **`Alerts`**: `GetBoardAlerts`, `MarkAlertRead`
 - **`AlertRules`**: `CreateAlertRule`
-- **`Users`**: `CreateUser`
-- **`Common`**: `ITaskFlowDbContext`, `IAlertNotifier`, `IDateTimeProvider` (interfaces
-  Infrastructure implements), `ValidationBehavior` (MediatR pipeline), custom exceptions
-  (`NotFoundException`, `ValidationException`)
+- **`Users`**: `CreateUser`, `Login`
+- **`Common`**: `ITaskFlowDbContext`, `IAlertNotifier`, `IDateTimeProvider`, `IBoardAuthorizer`
+  (interfaces Infrastructure implements; `IBoardAuthorizer` is the single chokepoint every
+  handler calls for `EnsureMemberAsync`/`EnsureOwnerAsync` role checks), `ValidationBehavior`
+  (MediatR pipeline), custom exceptions (`NotFoundException`, `ValidationException`,
+  `ForbiddenException` -> 403)
 
 ### 2.3 `Infrastructure` — the anomaly-detection engine + persistence
 - **`Persistence`**: `TaskFlowDbContext` + one `IEntityTypeConfiguration<T>` per entity
@@ -104,36 +115,59 @@ One folder per aggregate, one subfolder per use case:
   (implements `IAlertNotifier`)
 - **`Services/DateTimeProvider`**: the only place `DateTime.UtcNow` is called in
   production code, so tests can substitute a fake clock
+- **`Services/PasswordHasher`**: PBKDF2-HMAC-SHA256 password hashing (custom, not ASP.NET
+  Identity's `PasswordHasher<TUser>`, since `User` has a private constructor)
+- **`Services/JwtTokenGenerator`**: issues bearer tokens via `System.IdentityModel.Tokens.Jwt`
+- **`Services/CurrentUserService`**: reads the authenticated user's id/claims from
+  `IHttpContextAccessor` — the real, request-scoped `ICurrentUserService` implementation
+- **`JwtOptions`**: signing key/issuer/audience/expiry, bound from configuration
 
 ### 2.4 `Api` — HTTP surface
-- **Controllers**: `UsersController`, `BoardsController`, `TasksController`, `AlertsController`
+- **Controllers**: `AuthController`, `UsersController`, `BoardsController`,
+  `InvitationsController`, `NotificationsController`, `TasksController`, `AlertsController`
 - **`Middleware/ExceptionHandlingMiddleware`**: converts `NotFoundException` -> 404,
-  `ValidationException` -> 400, anything else -> 500, all as RFC 7807 `ProblemDetails`
-- **`Program.cs`**: composition root — registers Serilog, Swagger, health checks, CORS
-  (for local `ng serve`), applies EF Core migrations on startup, maps controllers +
+  `ValidationException` -> 400, `ForbiddenException` -> 403, anything else -> 500, all as
+  RFC 7807 `ProblemDetails`
+- **`Program.cs`**: composition root — registers Serilog, Swagger, JWT bearer auth, health
+  checks, CORS (for local `ng serve`), a `JsonStringEnumConverter` for enum-as-string
+  request/response bodies, applies EF Core migrations on startup, maps controllers +
   `AlertsHub` + `/health`
 
 ### 2.5 `frontend` — Angular 19 SPA
 - **`core/models`**: TypeScript mirrors of every backend DTO/enum
-  (`TaskDto`, `BoardDto`, `AlertDto`, `TaskState`, `TaskPriority`, `AlertSeverity`)
+  (`TaskDto`, `BoardDto`, `AlertDto`, `NotificationDto`, `TaskState`, `TaskPriority`,
+  `AlertSeverity`, `BoardRole`)
 - **`core/services`**:
-  - `CurrentUserService` — demo-scope identity (no real auth in the brief), persisted to `localStorage`
-  - `BoardService`, `TaskService` — thin HTTP wrappers
+  - `CurrentUserService` — real JWT-backed identity (register/login/token), persisted to
+    `localStorage`
+  - `BoardService`, `TaskService` — thin HTTP wrappers; `BoardService` also holds a shared
+    `boards` signal so any component (e.g. the notification bell after accepting an invite)
+    can trigger a refresh that every consumer sees
+  - `NotificationService` — REST fetch, exposes a shared `notifications` signal
   - `AlertService` — REST fetch + SignalR connection lifecycle (`connectToBoard`/`disconnect`), exposes a live `alerts` signal
-- **`features/boards/board-list`**: onboarding form + board grid + create-board form
+- **`core/interceptors`** / **`core/guards`**: an `HttpInterceptorFn` attaches the JWT to
+  every request and signs the user out on 401; a `CanActivateFn` guard protects authenticated
+  routes
+- **`features/auth`**: login/register forms
+- **`features/boards/board-list`**: board grid (Owner-only create-board form), each card
+  showing "created by you" vs "created by {owner}"
 - **`features/boards/board-detail`**: Kanban columns (Todo/In progress/Blocked/Done,
-  Cancelled hidden behind a counter), task creation form, per-task valid-transition
-  buttons (mirrors the backend state machine exactly), live alert console with a
-  connection-status indicator
+  Cancelled hidden behind a counter), Owner-only task creation form, per-task valid-transition
+  buttons (mirrors the backend state machine exactly, available to whoever the task is
+  assigned to), live alert console with a connection-status indicator
+- **`shared/notification-bell`**: mounted in the app shell on every page — lists
+  invitations/assignments/state-changes, lets the user accept/decline an invitation inline
 
 ### 2.6 `tests`
 - **`UnitTests/Domain`**: `TaskItemTests` (full state-machine truth table via
-  `[Theory]`/`[InlineData]`), `UserTests`, `AlertRuleTests`, `ResultTests`
-- **`UnitTests/Application`**: `CreateTaskCommandHandlerTests` against an EF Core
-  InMemory-backed fake context
-- **`IntegrationTests`**: `TasksEndpointsTests` — full HTTP round-trip
-  (create user -> create board -> create task -> list -> transition state) against a real,
-  disposable Postgres container
+  `[Theory]`/`[InlineData]`), `UserTests`, `AlertRuleTests`, `ResultTests`,
+  `BoardInvitationTests`, `ColorPaletteTests`
+- **`UnitTests/Application`**: handler tests for every command/query above (including
+  Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case)
+  against an EF Core InMemory-backed fake context — **104 tests**
+- **`IntegrationTests`**: full HTTP round-trips against a real, disposable Postgres
+  container — auth (register/login), board membership/roles, invitations, notifications,
+  task creation/assignment authorization — **16 tests**
 
 ### 2.7 Infrastructure-as-config
 - **`docker-compose.yml`**: orchestrates `postgres`, `api`, `frontend`
@@ -146,14 +180,21 @@ One folder per aggregate, one subfolder per use case:
 
 ## 3. Key features (functional summary)
 
-1. **Task management**: create, assign, and move tasks through an explicit state machine on a board
-2. **Workload anomaly detection**: a background worker continuously watches every board and raises alerts for:
+1. **Real authentication & authorization**: JWT bearer login/registration; board-scoped
+   Owner/Member roles enforced through a single `IBoardAuthorizer` chokepoint — only Owners
+   create tasks, assign them, manage membership, and configure alert rules
+2. **Invitations & notifications**: Owners invite teammates by email (works even if they
+   haven't registered yet); invitees get a real in-app notification and must accept before
+   joining; a notification center also surfaces task assignments and state changes, never
+   for your own actions
+3. **Task management**: create, assign, and move tasks through an explicit state machine on a board
+4. **Workload anomaly detection**: a background worker continuously watches every board and raises alerts for:
    - a user with too many overdue tasks
    - a board whose active-task count spiked abnormally within a time window
    - a user juggling too many concurrent in-progress tasks (context-switch risk)
-3. **Real-time delivery**: alerts appear in the UI instantly via SignalR, no polling
-4. **Configurable thresholds**: alert rules (threshold + evaluation window) are created per board via the API, not hardcoded
-5. **Self-contained demo**: `docker compose up --build` is the entire setup — migrations apply automatically on API startup
+5. **Real-time delivery**: alerts appear in the UI instantly via SignalR, no polling
+6. **Configurable thresholds**: alert rules (threshold + evaluation window) are created per board via the API, not hardcoded
+7. **Self-contained demo**: `docker compose up --build` is the entire setup — migrations apply automatically on API startup
 
 ---
 
@@ -208,6 +249,24 @@ docker compose logs api -f     # tail API logs (Serilog output)
 
 ## 5. Future work (explicitly out of scope for v1)
 
-- Real authentication (`CurrentUserService` is demo-scope, no password/JWT)
+- Renaming or deleting a board (the domain model supports renaming internally, but no
+  command/endpoint exposes it yet; deletion isn't modeled at all)
+- Authenticating the SignalR connection itself (`AlertsHub` currently accepts any connection
+  that knows a board id — REST endpoints are fully JWT-protected, but the hub is not)
+- Promoting/demoting a member beyond `UpdateBoardMemberRole`'s Owner/Member toggle (e.g. a
+  finer-grained permission model, or transferring board ownership)
 
-See [`docs/2026-07-23-frontend-tests-and-ci-fixes.md`](docs/2026-07-23-frontend-tests-and-ci-fixes.md) for the frontend unit test suite added (previously missing) and two real bugs it uncovered in CI, [`docs/2026-07-23-task-completed-event-dispatch.md`](docs/2026-07-23-task-completed-event-dispatch.md) for how `TaskCompletedEvent` is now dispatched to a real handler, and [`docs/2026-07-23-assign-task-to-any-user-in-ui.md`](docs/2026-07-23-assign-task-to-any-user-in-ui.md) for assigning tasks to any user from the UI.
+## 6. Feature history
+
+Dated write-ups of individual features and fixes, in the order they were built, each with
+what changed, why, and how it was verified:
+
+- [`docs/2026-07-23-frontend-tests-and-ci-fixes.md`](docs/2026-07-23-frontend-tests-and-ci-fixes.md) — the frontend unit test suite (previously missing) and two real CI bugs it uncovered
+- [`docs/2026-07-23-task-completed-event-dispatch.md`](docs/2026-07-23-task-completed-event-dispatch.md) — `TaskCompletedEvent` dispatched to a real handler
+- [`docs/2026-07-23-assign-task-to-any-user-in-ui.md`](docs/2026-07-23-assign-task-to-any-user-in-ui.md) — assigning tasks to any user from the UI
+- [`docs/2026-07-23-enum-json-serialization-fix.md`](docs/2026-07-23-enum-json-serialization-fix.md) — the string-vs-numeric enum bug behind a live 400 on task creation
+- [`docs/2026-07-23-real-authentication.md`](docs/2026-07-23-real-authentication.md) — JWT bearer auth, password hashing, login/register
+- [`docs/2026-07-23-board-membership-and-roles.md`](docs/2026-07-23-board-membership-and-roles.md) — `BoardMember`, `BoardRole`, `IBoardAuthorizer`
+- [`docs/2026-07-23-board-and-user-colors.md`](docs/2026-07-23-board-and-user-colors.md) — the color palette and per-board/user accent colors
+- [`docs/2026-07-23-invitations-notifications-and-owner-only-assignment.md`](docs/2026-07-23-invitations-notifications-and-owner-only-assignment.md) — email invitations, the notification center, Owner-only task assignment
+- [`docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md`](docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md) — Owner-only task creation, the board-list live-refresh bug fix, and "created by" display
