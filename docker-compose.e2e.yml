@@ -1,0 +1,9 @@
+# Overlay for running the Playwright suite (see e2e/) against the full Docker stack — relaxes
+# the login/register rate limit, which the real demo (docker-compose.yml) deliberately keeps
+# tight, since a handful of E2E tests registering their own users would otherwise trip it.
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
+services:
+  api:
+    environment:
+      RateLimiting__Auth__PermitLimit: "1000"

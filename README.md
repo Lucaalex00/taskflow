@@ -80,9 +80,11 @@ the test suite to back every one of them up.
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **206 automated tests** — 104 backend unit, 20 backend integration (against a real,
-  disposable Postgres container via Testcontainers), 82 frontend — plus a GitHub Actions
-  pipeline that runs all of them, plus lint and a production build, on every push.
+- **212 automated tests** — 104 backend unit, 20 backend integration (against a real,
+  disposable Postgres container via Testcontainers), 82 frontend, 6 end-to-end (Playwright,
+  driving two real browser contexts through the full owner/member workflow against the actual
+  Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and a
+  production build, on every push.
 
 ## Quick start
 
@@ -227,6 +229,10 @@ dotnet test tests/IntegrationTests/TaskFlow.IntegrationTests.csproj
 cd frontend
 npx ng test --watch=false --browsers=ChromeHeadless
 npx ng lint
+
+# End-to-end (Playwright, against the real Docker stack — start it first)
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
+cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
 ```
 
 | Suite | Count | What it covers |
@@ -234,6 +240,7 @@ npx ng lint
 | Backend unit | 104 | Domain rules (state machines, validation, color palette), CQRS handlers against an EF Core InMemory context |
 | Backend integration | 20 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, board membership/roles, invitations, notifications, SignalR hub authorization |
 | Frontend | 82 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
+| End-to-end | 6 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
 ## Project structure
 
@@ -246,7 +253,8 @@ src/
 frontend/              Angular 19 SPA
 tests/
   UnitTests/           Domain + Application unit tests
-  IntegrationTests/     end-to-end API tests against a real Postgres (Testcontainers)
+  IntegrationTests/     API integration tests against a real Postgres (Testcontainers)
+e2e/                   Playwright end-to-end tests against the full Docker stack
 docs/
   adr/                 architecture decision records
   *.md                 dated notes on individual features/fixes as they were built

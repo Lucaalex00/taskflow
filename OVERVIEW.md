@@ -169,13 +169,24 @@ One folder per aggregate, one subfolder per use case:
   container — auth (register/login), the login/register rate limiter, board membership/roles,
   invitations, notifications, task creation/assignment authorization, SignalR hub
   authentication/board-membership checks — **20 tests**
+- **`e2e`** (Playwright, `@playwright/test`): drives real Chromium browsers against the actual
+  Docker stack (not a mocked backend) — auth redirects, register/sign-out/sign-in, wrong
+  password, board creation, and a two-browser-context walk through the full owner/member
+  workflow (invite by email, accept from the notification bell, assign, move through the
+  state machine, and the role boundary itself) — **6 tests**. Run via
+  `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d` then
+  `cd e2e && npm ci && npx playwright test`
 
 ### 2.7 Infrastructure-as-config
 - **`docker-compose.yml`**: orchestrates `postgres`, `api`, `frontend`
+- **`docker-compose.e2e.yml`**: overlay used only by the Playwright suite — relaxes the
+  login/register rate limit so E2E tests registering their own users don't trip it, without
+  touching the realistic default in `docker-compose.yml`
 - **`Dockerfile.api`** / **`Dockerfile.frontend`**: multi-stage builds (SDK/Node -> slim runtime)
 - **`docker/nginx.conf`**: serves the Angular build, proxies `/api/` and `/hubs/` to the API container (avoids CORS in the Docker demo)
 - **`.github/workflows/ci.yml`**: backend build+test (with a real Postgres service
-  container), frontend build+test, Docker build & push to GHCR on `main`
+  container), frontend build+test, end-to-end tests (full Docker stack + Playwright), Docker
+  build & push to GHCR on `main`
 
 ---
 
@@ -275,3 +286,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md`](docs/2026-07-23-owner-only-task-creation-and-board-ownership-display.md) — Owner-only task creation, the board-list live-refresh bug fix, and "created by" display
 - [`docs/2026-07-24-secure-signalr-hub-with-jwt-and-board-membership.md`](docs/2026-07-24-secure-signalr-hub-with-jwt-and-board-membership.md) — JWT-authenticated the SignalR hub and enforced board membership on `JoinBoard`
 - [`docs/2026-07-24-rate-limit-login-and-register.md`](docs/2026-07-24-rate-limit-login-and-register.md) — per-IP rate limiting on the two anonymous endpoints
+- [`docs/2026-07-24-playwright-e2e-suite.md`](docs/2026-07-24-playwright-e2e-suite.md) — a real-browser end-to-end test tier against the full Docker stack, and a real UX gap it surfaced (the owner's member list doesn't refresh live)
