@@ -21,6 +21,11 @@ const ALLOWED_TRANSITIONS: Record<TaskState, TaskState[]> = {
 
 const BOARD_COLUMNS = [TaskState.Todo, TaskState.InProgress, TaskState.Blocked, TaskState.Done] as const;
 
+// The member list has no push channel (unlike alerts/notifications), so a newly-accepted
+// teammate wouldn't show up in the assignee dropdown until a manual reload. Poll instead, at
+// the same cadence NotificationBellComponent already uses for the same reason.
+const MEMBERS_POLL_INTERVAL_MS = 20_000;
+
 const COLUMN_LABELS: Record<TaskState, string> = {
   [TaskState.Todo]: 'To do',
   [TaskState.InProgress]: 'In progress',
@@ -78,6 +83,9 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   // Invite member form state.
   newMemberEmail = '';
   readonly isInvitingMember = signal(false);
+  readonly inviteSuccessMessage = signal<string | null>(null);
+
+  private membersPollHandle?: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -95,9 +103,12 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
       this.loadMembers(),
       this.alertService.connectToBoard(this.boardId)
     ]);
+
+    this.membersPollHandle = setInterval(() => void this.loadMembers(), MEMBERS_POLL_INTERVAL_MS);
   }
 
   async ngOnDestroy(): Promise<void> {
+    if (this.membersPollHandle) clearInterval(this.membersPollHandle);
     await this.alertService.disconnect();
   }
 
@@ -173,12 +184,15 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   async inviteMember(): Promise<void> {
     if (!this.newMemberEmail.trim()) return;
 
+    const email = this.newMemberEmail.trim();
     this.isInvitingMember.set(true);
     this.errorMessage.set(null);
+    this.inviteSuccessMessage.set(null);
 
     try {
-      await this.boardService.inviteMember(this.boardId, { email: this.newMemberEmail.trim() });
+      await this.boardService.inviteMember(this.boardId, { email });
       this.newMemberEmail = '';
+      this.inviteSuccessMessage.set(`Invitation sent to ${email}.`);
     } catch {
       this.errorMessage.set('Could not invite this email (they may already be invited or a member).');
     } finally {

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { signal } from '@angular/core';
 import { BoardDetailComponent } from './board-detail.component';
@@ -286,6 +286,26 @@ describe('BoardDetailComponent', () => {
     expect(alertService.disconnect).toHaveBeenCalled();
   });
 
+  it('polls the member list every 20s so a newly-accepted teammate shows up without a reload', fakeAsync(() => {
+    const { component } = createComponent();
+    boardService.getMembers.and.resolveTo([owner]);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    component.ngOnInit();
+    tick();
+    expect(boardService.getMembers).toHaveBeenCalledTimes(1);
+
+    tick(20_000);
+    expect(boardService.getMembers).toHaveBeenCalledTimes(2);
+
+    tick(20_000);
+    expect(boardService.getMembers).toHaveBeenCalledTimes(3);
+
+    component.ngOnDestroy();
+    tick(20_000);
+    expect(boardService.getMembers).toHaveBeenCalledTimes(3);
+  }));
+
   it('isOwner is true when the current user is an Owner member of the board', async () => {
     const { component } = createComponent();
     boardService.getMembers.and.resolveTo([owner]);
@@ -306,7 +326,7 @@ describe('BoardDetailComponent', () => {
     expect(component.isOwner()).toBeFalse();
   });
 
-  it('inviteMember invites the entered email and resets the form', async () => {
+  it('inviteMember invites the entered email, resets the form and shows a confirmation', async () => {
     const { component } = createComponent();
     boardService.inviteMember.and.resolveTo(undefined);
     component.newMemberEmail = 'teammate@example.com';
@@ -315,6 +335,7 @@ describe('BoardDetailComponent', () => {
 
     expect(boardService.inviteMember).toHaveBeenCalledWith('board-1', { email: 'teammate@example.com' });
     expect(component.newMemberEmail).toBe('');
+    expect(component.inviteSuccessMessage()).toBe('Invitation sent to teammate@example.com.');
   });
 
   it('inviteMember does nothing when the email is blank', async () => {

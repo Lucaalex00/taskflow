@@ -287,3 +287,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-secure-signalr-hub-with-jwt-and-board-membership.md`](docs/2026-07-24-secure-signalr-hub-with-jwt-and-board-membership.md) — JWT-authenticated the SignalR hub and enforced board membership on `JoinBoard`
 - [`docs/2026-07-24-rate-limit-login-and-register.md`](docs/2026-07-24-rate-limit-login-and-register.md) — per-IP rate limiting on the two anonymous endpoints
 - [`docs/2026-07-24-playwright-e2e-suite.md`](docs/2026-07-24-playwright-e2e-suite.md) — a real-browser end-to-end test tier against the full Docker stack, and a real UX gap it surfaced (the owner's member list doesn't refresh live)
+- [`docs/2026-07-24-live-member-list-and-invite-feedback.md`](docs/2026-07-24-live-member-list-and-invite-feedback.md) — fixed that gap (the member list now polls, like notifications already do) and added an explicit "Invitation sent" confirmation

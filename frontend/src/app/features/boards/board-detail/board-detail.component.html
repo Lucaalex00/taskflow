@@ -56,6 +56,9 @@
               {{ isInvitingMember() ? 'Inviting…' : 'Invite' }}
             </button>
           </form>
+          @if (inviteSuccessMessage()) {
+            <p class="invite-success mono">{{ inviteSuccessMessage() }}</p>
+          }
         }
       </section>
     }
