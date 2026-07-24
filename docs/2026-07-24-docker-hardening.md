@@ -28,12 +28,15 @@ resource usage, and CI never scanned the published images for known vulnerabilit
   artifact. Deliberately non-blocking (`exit-code: '0'`) — a demo project shouldn't go red over
   a CVE in an upstream base image nobody's shipped a fix for yet, but it should still be visible
   to whoever's reviewing the repo.
-  - *Note:* an earlier version uploaded the results to the repo's Security tab via SARIF (which
-    needs `security-events: write` + code scanning enabled); it was switched to the log-table +
-    artifact approach so it works on any repo without extra setup. Separately, the first CI
-    attempt failed at "Set up job" because the Trivy action was pinned as `@0.29.0` — the tag
-    requires a `v` prefix (`@v0.29.0`), and GitHub resolves every action reference during job
-    setup, so a bad version aborts the whole job before any step runs.
+  - *Note:* getting this green took a few iterations, all in job setup (GitHub resolves every
+    action reference before running any step, so a bad reference aborts the whole job):
+    (1) an initial SARIF-upload-to-Security-tab version needed `security-events: write` +
+    code scanning enabled — dropped for portability; (2) `aquasecurity/trivy-action@0.29.0`
+    doesn't resolve (the tag needs a `v` prefix); (3) `@v0.29.0` *does* resolve but internally
+    pins `aquasecurity/setup-trivy@v0.2.2`, a helper tag that has since gone missing. The fix
+    that ends the whack-a-mole: skip the wrapper action entirely and run Trivy from its official
+    `aquasec/trivy` Docker image in a plain `run:` step, pulling the images from GHCR with the
+    docker-login credentials already on disk.
 
 ## Verification
 
