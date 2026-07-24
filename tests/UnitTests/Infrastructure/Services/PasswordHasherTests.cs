@@ -10,16 +10,16 @@ public class PasswordHasherTests
     public void Verify_WithTheCorrectPassword_ReturnsTrue()
     {
         var hasher = new PasswordHasher();
-        var hash = hasher.Hash("correct-horse-battery-staple");
+        var hash = hasher.Hash("Correct-horse-battery-staple9");
 
-        hasher.Verify(hash, "correct-horse-battery-staple").Should().BeTrue();
+        hasher.Verify(hash, "Correct-horse-battery-staple9").Should().BeTrue();
     }
 
     [Fact]
     public void Verify_WithTheWrongPassword_ReturnsFalse()
     {
         var hasher = new PasswordHasher();
-        var hash = hasher.Hash("correct-horse-battery-staple");
+        var hash = hasher.Hash("Correct-horse-battery-staple9");
 
         hasher.Verify(hash, "wrong-password").Should().BeFalse();
     }

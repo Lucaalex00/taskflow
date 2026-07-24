@@ -56,18 +56,36 @@
         class="field__input"
         type="password"
         name="password"
-        [(ngModel)]="password"
-        placeholder="At least 8 characters"
-        minlength="8"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        [placeholder]="mode() === 'register' ? 'Choose a strong password' : 'Your password'"
         required
       />
     </label>
+
+    @if (mode() === 'register') {
+      <ul class="password-checklist" aria-label="Password requirements">
+        @for (requirement of passwordRequirements(); track requirement.label) {
+          <li
+            class="password-checklist__item"
+            [class.password-checklist__item--met]="requirement.met"
+          >
+            <span class="password-checklist__mark" aria-hidden="true">{{ requirement.met ? '✓' : '○' }}</span>
+            {{ requirement.label }}
+          </li>
+        }
+      </ul>
+    }
 
     @if (errorMessage()) {
       <p class="form-error">{{ errorMessage() }}</p>
     }
 
-    <button class="btn btn--primary" type="submit" [disabled]="isSubmitting()">
+    <button
+      class="btn btn--primary"
+      type="submit"
+      [disabled]="isSubmitting() || (mode() === 'register' && !isPasswordValid())"
+    >
       {{ isSubmitting() ? 'Please wait…' : mode() === 'login' ? 'Sign in' : 'Create account' }}
     </button>
   </form>

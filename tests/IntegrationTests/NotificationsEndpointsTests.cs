@@ -28,7 +28,7 @@ public class NotificationsEndpointsTests(TaskFlowApiFactory factory) : IClassFix
         {
             Email = email,
             DisplayName = displayName,
-            Password = "correct-horse-battery-staple"
+            Password = "Correct-horse-battery-staple9"
         });
         var auth = await response.Content.ReadFromJsonAsync<AuthResult>(JsonOptions);
         return (auth!.UserId, email, auth.Token);
@@ -54,7 +54,7 @@ public class NotificationsEndpointsTests(TaskFlowApiFactory factory) : IClassFix
         {
             Email = futureEmail,
             DisplayName = "Late Joiner",
-            Password = "correct-horse-battery-staple"
+            Password = "Correct-horse-battery-staple9"
         });
         var auth = await registerResponse.Content.ReadFromJsonAsync<AuthResult>(JsonOptions);
         AuthenticateAs(auth!.Token);

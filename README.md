@@ -58,6 +58,8 @@ the test suite to back every one of them up.
 - Password registration/login with PBKDF2-HMAC-SHA256 hashing and JWT bearer tokens —
   every endpoint requires authentication, including the SignalR hub itself.
 - Login/register are rate-limited per IP against brute-force/credential-stuffing attempts.
+- A real password policy (length + upper/lower/number), enforced server-side and mirrored by a
+  live requirements checklist in the registration form.
 - Defensive HTTP headers on every response (strict CSP, HSTS, X-Frame-Options,
   X-Content-Type-Options, Referrer-Policy) on both the API and the nginx-served frontend.
 - Board-scoped **Owner / Member** roles, enforced consistently through a single
@@ -82,8 +84,8 @@ the test suite to back every one of them up.
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **217 automated tests** — 104 backend unit, 24 backend integration (against a real,
-  disposable Postgres container via Testcontainers), 83 frontend, 6 end-to-end (Playwright,
+- **221 automated tests** — 109 backend unit, 24 backend integration (against a real,
+  disposable Postgres container via Testcontainers), 85 frontend, 6 end-to-end (Playwright,
   driving two real browser contexts through the full owner/member workflow against the actual
   Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and a
   production build, on every push.
@@ -122,7 +124,7 @@ that exercises the role/invitation/notification system end to end, straight agai
 ```bash
 # 1. Register the board owner
 curl -s -X POST http://localhost:5080/api/users -H "Content-Type: application/json" \
-  -d '{"email":"owner@example.com","displayName":"Owner","password":"correct-horse-battery-staple"}'
+  -d '{"email":"owner@example.com","displayName":"Owner","password":"Correct-horse-battery-staple9"}'
 # → { "userId": "...", "token": "..." }  — save the token as $OWNER_TOKEN
 
 # 2. Create a board (color is optional, falls back to a random accent)
@@ -137,7 +139,7 @@ curl -s -X POST http://localhost:5080/api/boards/<boardId>/invitations \
 
 # 4. Register the teammate, then check their notifications
 curl -s -X POST http://localhost:5080/api/users -H "Content-Type: application/json" \
-  -d '{"email":"teammate@example.com","displayName":"Teammate","password":"correct-horse-battery-staple"}'
+  -d '{"email":"teammate@example.com","displayName":"Teammate","password":"Correct-horse-battery-staple9"}'
 curl -s http://localhost:5080/api/notifications -H "Authorization: Bearer $TEAMMATE_TOKEN"
 # → the board invitation notification, with an invitationId to respond to
 
@@ -239,9 +241,9 @@ cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwrigh
 
 | Suite | Count | What it covers |
 |---|---|---|
-| Backend unit | 104 | Domain rules (state machines, validation, color palette), CQRS handlers against an EF Core InMemory context |
+| Backend unit | 109 | Domain rules (state machines, validation, color palette, password policy), CQRS handlers against an EF Core InMemory context |
 | Backend integration | 24 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, security headers, board membership/roles, invitations, notifications, SignalR hub authorization |
-| Frontend | 83 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
+| Frontend | 85 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
 | End-to-end | 6 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
 ## Project structure

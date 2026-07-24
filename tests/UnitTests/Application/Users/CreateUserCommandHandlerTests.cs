@@ -15,7 +15,7 @@ public class CreateUserCommandHandlerTests
     {
         await using var context = new TestDbContext();
         var handler = new CreateUserCommandHandler(context, new FakePasswordHasher(), new FakeTokenGenerator());
-        var command = new CreateUserCommand("ada@example.com", "Ada", "correct-horse-battery-staple");
+        var command = new CreateUserCommand("ada@example.com", "Ada", "Correct-horse-battery-staple9");
 
         var result = await handler.Handle(command, CancellationToken.None);
 
@@ -23,7 +23,7 @@ public class CreateUserCommandHandlerTests
         result.Token.Should().Be($"token-for-{result.UserId}");
 
         var savedUser = await context.Users.FindAsync(result.UserId);
-        savedUser!.PasswordHash.Should().Be("hashed:correct-horse-battery-staple");
+        savedUser!.PasswordHash.Should().Be("hashed:Correct-horse-battery-staple9");
     }
 
     [Fact]
@@ -51,7 +51,7 @@ public class CreateUserCommandHandlerTests
 
         var handler = new CreateUserCommandHandler(context, new FakePasswordHasher(), new FakeTokenGenerator());
         var result = await handler.Handle(
-            new CreateUserCommand("ada@example.com", "Ada", "correct-horse-battery-staple"), CancellationToken.None);
+            new CreateUserCommand("ada@example.com", "Ada", "Correct-horse-battery-staple9"), CancellationToken.None);
 
         (await context.BoardInvitations.FindAsync(invitation.Id))!.InviteeUserId.Should().Be(result.UserId);
         context.Notifications.Should().ContainSingle(

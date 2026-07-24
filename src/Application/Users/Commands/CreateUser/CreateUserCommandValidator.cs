@@ -1,4 +1,5 @@
 using FluentValidation;
+using TaskFlow.Application.Common.Validation;
 
 namespace TaskFlow.Application.Users.Commands.CreateUser;
 
@@ -8,6 +9,6 @@ public sealed class CreateUserCommandValidator : AbstractValidator<CreateUserCom
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
+        RuleFor(x => x.Password).Password();
     }
 }

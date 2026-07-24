@@ -23,7 +23,7 @@ test.describe('Authentication', () => {
 
     await page.goto('/login');
     await page.getByPlaceholder('you@example.com').fill(user.email);
-    await page.getByPlaceholder('At least 8 characters').fill('definitely-the-wrong-password');
+    await page.locator('input[name="password"]').fill('definitely-the-wrong-password');
     await page.locator('form.onboard__form').getByRole('button').click();
 
     await expect(page.locator('.form-error')).toBeVisible();

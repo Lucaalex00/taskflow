@@ -97,7 +97,8 @@ One folder per aggregate, one subfolder per use case:
 - **`Common`**: `ITaskFlowDbContext`, `IAlertNotifier`, `IDateTimeProvider`, `IBoardAuthorizer`
   (interfaces Infrastructure implements; `IBoardAuthorizer` is the single chokepoint every
   handler calls for `EnsureMemberAsync`/`EnsureOwnerAsync` role checks), `ValidationBehavior`
-  (MediatR pipeline), custom exceptions (`NotFoundException`, `ValidationException`,
+  (MediatR pipeline), `Validation/PasswordRules` (the single reusable password-policy rule used
+  by registration), custom exceptions (`NotFoundException`, `ValidationException`,
   `ForbiddenException` -> 403)
 
 ### 2.3 `Infrastructure` — the anomaly-detection engine + persistence
@@ -166,8 +167,9 @@ One folder per aggregate, one subfolder per use case:
   `[Theory]`/`[InlineData]`), `UserTests`, `AlertRuleTests`, `ResultTests`,
   `BoardInvitationTests`, `ColorPaletteTests`
 - **`UnitTests/Application`**: handler tests for every command/query above (including
-  Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case)
-  against an EF Core InMemory-backed fake context — **104 tests**
+  Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case) and
+  validator tests (e.g. `CreateUserCommandValidatorTests` for the password policy) against an
+  EF Core InMemory-backed fake context — **109 tests**
 - **`IntegrationTests`**: full HTTP round-trips against a real, disposable Postgres
   container — auth (register/login), the login/register rate limiter, security headers, board
   membership/roles, invitations, notifications, task creation/assignment authorization,
@@ -294,3 +296,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-live-member-list-and-invite-feedback.md`](docs/2026-07-24-live-member-list-and-invite-feedback.md) — fixed that gap (the member list now polls, like notifications already do) and added an explicit "Invitation sent" confirmation
 - [`docs/2026-07-24-docker-hardening.md`](docs/2026-07-24-docker-hardening.md) — non-root frontend container, restart policies, resource limits, and Trivy image scanning in CI
 - [`docs/2026-07-24-security-headers.md`](docs/2026-07-24-security-headers.md) — defensive HTTP headers on API + frontend, and a latent test-isolation bug it surfaced (integration tests were hitting the wrong Postgres)
+- [`docs/2026-07-24-stronger-password-policy.md`](docs/2026-07-24-stronger-password-policy.md) — a real password policy enforced server-side and mirrored by a live requirements checklist in the registration form

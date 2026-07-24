@@ -27,7 +27,7 @@ public class AuthRateLimitingTests(RateLimitedApiFactory factory) : IClassFixtur
             {
                 Email = $"{Guid.NewGuid()}@example.com",
                 DisplayName = "Rate Limit Tester",
-                Password = "correct-horse-battery-staple"
+                Password = "Correct-horse-battery-staple9"
             });
         }
 

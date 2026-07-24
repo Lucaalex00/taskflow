@@ -17,14 +17,14 @@ export async function registerUser(page: Page, displayName: string): Promise<Reg
   const user: RegisteredUser = {
     email: uniqueEmail(displayName.toLowerCase().replace(/\s+/g, '-')),
     displayName,
-    password: 'correct-horse-battery-staple'
+    password: 'Correct-horse-battery-staple9'
   };
 
   await page.goto('/login');
   await page.locator('.mode-switch').getByRole('button', { name: 'Register' }).click();
   await page.getByPlaceholder('you@example.com').fill(user.email);
   await page.getByPlaceholder('Ada Lovelace').fill(user.displayName);
-  await page.getByPlaceholder('At least 8 characters').fill(user.password);
+  await page.locator('input[name="password"]').fill(user.password);
   await page.locator('form.onboard__form').getByRole('button').click();
 
   await expect(page.getByRole('heading', { name: 'Boards' })).toBeVisible();
@@ -36,7 +36,7 @@ export async function registerUser(page: Page, displayName: string): Promise<Reg
 export async function loginAs(page: Page, user: RegisteredUser): Promise<void> {
   await page.goto('/login');
   await page.getByPlaceholder('you@example.com').fill(user.email);
-  await page.getByPlaceholder('At least 8 characters').fill(user.password);
+  await page.locator('input[name="password"]').fill(user.password);
   await page.locator('form.onboard__form').getByRole('button').click();
 
   await expect(page.getByRole('heading', { name: 'Boards' })).toBeVisible();

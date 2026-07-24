@@ -21,11 +21,11 @@ public class LoginCommandHandlerTests
     [Fact]
     public async Task Handle_WithCorrectCredentials_ReturnsAToken()
     {
-        await using var context = await SeedContextWithUserAsync("ada@example.com", "correct-horse-battery-staple");
+        await using var context = await SeedContextWithUserAsync("ada@example.com", "Correct-horse-battery-staple9");
         var handler = new LoginCommandHandler(context, new FakePasswordHasher(), new FakeTokenGenerator());
 
         var result = await handler.Handle(
-            new LoginCommand("ada@example.com", "correct-horse-battery-staple"), CancellationToken.None);
+            new LoginCommand("ada@example.com", "Correct-horse-battery-staple9"), CancellationToken.None);
 
         result.DisplayName.Should().Be("Ada");
         result.Token.Should().Be($"token-for-{result.UserId}");
@@ -34,7 +34,7 @@ public class LoginCommandHandlerTests
     [Fact]
     public async Task Handle_WithWrongPassword_ThrowsAuthenticationException()
     {
-        await using var context = await SeedContextWithUserAsync("ada@example.com", "correct-horse-battery-staple");
+        await using var context = await SeedContextWithUserAsync("ada@example.com", "Correct-horse-battery-staple9");
         var handler = new LoginCommandHandler(context, new FakePasswordHasher(), new FakeTokenGenerator());
 
         var act = async () => await handler.Handle(

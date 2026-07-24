@@ -44,7 +44,7 @@ describe('LoginComponent', () => {
     const { component } = createComponent();
     currentUser.login.and.resolveTo(undefined);
     component.email = 'ada@example.com';
-    component.password = 'password123';
+    component.password.set('password123');
 
     await component.submit();
 
@@ -58,14 +58,14 @@ describe('LoginComponent', () => {
     component.switchMode('register');
     component.email = 'ada@example.com';
     component.displayName = 'Ada';
-    component.password = 'password123';
+    component.password.set('Password123');
 
     await component.submit();
 
     expect(currentUser.register).toHaveBeenCalledWith({
       email: 'ada@example.com',
       displayName: 'Ada',
-      password: 'password123'
+      password: 'Password123'
     });
     expect(router.navigateByUrl).toHaveBeenCalledWith('/');
   });
@@ -74,7 +74,7 @@ describe('LoginComponent', () => {
     const { component } = createComponent();
     currentUser.login.and.rejectWith(new Error('boom'));
     component.email = 'ada@example.com';
-    component.password = 'wrong-password';
+    component.password.set('wrong-password');
 
     await component.submit();
 
@@ -85,7 +85,7 @@ describe('LoginComponent', () => {
   it('submit does nothing when required fields are blank', async () => {
     const { component } = createComponent();
     component.email = '';
-    component.password = '';
+    component.password.set('');
 
     await component.submit();
 
@@ -96,8 +96,32 @@ describe('LoginComponent', () => {
     const { component } = createComponent();
     component.switchMode('register');
     component.email = 'ada@example.com';
-    component.password = 'password123';
+    component.password.set('Password123');
     component.displayName = '   ';
+
+    await component.submit();
+
+    expect(currentUser.register).not.toHaveBeenCalled();
+  });
+
+  it('isPasswordValid reflects the live password policy (register mode checklist)', () => {
+    const { component } = createComponent();
+
+    component.password.set('short');
+    expect(component.isPasswordValid()).toBeFalse();
+    expect(component.passwordRequirements().every((r) => r.met)).toBeFalse();
+
+    component.password.set('Password123');
+    expect(component.isPasswordValid()).toBeTrue();
+    expect(component.passwordRequirements().every((r) => r.met)).toBeTrue();
+  });
+
+  it('submit does nothing in register mode when the password fails the policy', async () => {
+    const { component } = createComponent();
+    component.switchMode('register');
+    component.email = 'ada@example.com';
+    component.displayName = 'Ada';
+    component.password.set('weak'); // too short, no uppercase, no number
 
     await component.submit();
 

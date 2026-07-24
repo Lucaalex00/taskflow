@@ -34,7 +34,7 @@ public class TasksEndpointsTests(TaskFlowApiFactory factory) : IClassFixture<Tas
         {
             Email = $"{Guid.NewGuid()}@example.com",
             DisplayName = displayName,
-            Password = "correct-horse-battery-staple"
+            Password = "Correct-horse-battery-staple9"
         });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
