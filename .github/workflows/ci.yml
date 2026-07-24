@@ -192,11 +192,12 @@ jobs:
       # Scans each published image for HIGH/CRITICAL CVEs (OS packages + .NET/npm
       # dependencies). Prints a readable table to the job log and saves it as a build
       # artifact — deliberately NOT uploaded to the Security tab, so it needs no
-      # security-events permission or code-scanning setup (requesting that permission was what
-      # broke the job at setup). Non-blocking (exit-code 0): a demo shouldn't go red over a CVE
-      # in an upstream base image nobody's shipped a fix for yet, but it should stay visible.
+      # security-events permission or code-scanning setup. Non-blocking (exit-code 0): a demo
+      # shouldn't go red over a CVE in an upstream base image nobody's shipped a fix for yet,
+      # but it should stay visible. (Note the required "v" prefix on the action version — a
+      # bare "0.29.0" doesn't resolve and fails the whole job at "Set up job".)
       - name: Scan API image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           image-ref: ghcr.io/${{ steps.image.outputs.repository }}/api:${{ github.sha }}
           format: table
@@ -205,7 +206,7 @@ jobs:
           exit-code: '0'
 
       - name: Scan frontend image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.29.0
         with:
           image-ref: ghcr.io/${{ steps.image.outputs.repository }}/frontend:${{ github.sha }}
           format: table

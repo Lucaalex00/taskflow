@@ -28,11 +28,12 @@ resource usage, and CI never scanned the published images for known vulnerabilit
   artifact. Deliberately non-blocking (`exit-code: '0'`) — a demo project shouldn't go red over
   a CVE in an upstream base image nobody's shipped a fix for yet, but it should still be visible
   to whoever's reviewing the repo.
-  - *Note:* an earlier version uploaded the results to the repo's Security tab via SARIF, which
-    required `security-events: write` on the job. That permission made the job fail at "Set up
-    job" (the token can't be minted with a code-scanning scope unless the feature is enabled on
-    the repo), so it was switched to the log-table + artifact approach, which needs no special
-    permission and works on any repo.
+  - *Note:* an earlier version uploaded the results to the repo's Security tab via SARIF (which
+    needs `security-events: write` + code scanning enabled); it was switched to the log-table +
+    artifact approach so it works on any repo without extra setup. Separately, the first CI
+    attempt failed at "Set up job" because the Trivy action was pinned as `@0.29.0` — the tag
+    requires a `v` prefix (`@v0.29.0`), and GitHub resolves every action reference during job
+    setup, so a bad version aborts the whole job before any step runs.
 
 ## Verification
 
