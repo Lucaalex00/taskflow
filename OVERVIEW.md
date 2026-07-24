@@ -178,7 +178,8 @@ One folder per aggregate, one subfolder per use case:
   `cd e2e && npm ci && npx playwright test`
 
 ### 2.7 Infrastructure-as-config
-- **`docker-compose.yml`**: orchestrates `postgres`, `api`, `frontend`
+- **`docker-compose.yml`**: orchestrates `postgres`, `api`, `frontend` — each with a
+  `restart: unless-stopped` policy and a `deploy.resources.limits` (cpus/memory) cap
 - **`docker-compose.e2e.yml`**: overlay used only by the Playwright suite — relaxes the
   login/register rate limit so E2E tests registering their own users don't trip it, without
   touching the realistic default in `docker-compose.yml`
@@ -186,7 +187,7 @@ One folder per aggregate, one subfolder per use case:
 - **`docker/nginx.conf`**: serves the Angular build, proxies `/api/` and `/hubs/` to the API container (avoids CORS in the Docker demo)
 - **`.github/workflows/ci.yml`**: backend build+test (with a real Postgres service
   container), frontend build+test, end-to-end tests (full Docker stack + Playwright), Docker
-  build & push to GHCR on `main`
+  build & push to GHCR on `main` + Trivy vulnerability scan of both published images
 
 ---
 
@@ -288,3 +289,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-rate-limit-login-and-register.md`](docs/2026-07-24-rate-limit-login-and-register.md) — per-IP rate limiting on the two anonymous endpoints
 - [`docs/2026-07-24-playwright-e2e-suite.md`](docs/2026-07-24-playwright-e2e-suite.md) — a real-browser end-to-end test tier against the full Docker stack, and a real UX gap it surfaced (the owner's member list doesn't refresh live)
 - [`docs/2026-07-24-live-member-list-and-invite-feedback.md`](docs/2026-07-24-live-member-list-and-invite-feedback.md) — fixed that gap (the member list now polls, like notifications already do) and added an explicit "Invitation sent" confirmation
+- [`docs/2026-07-24-docker-hardening.md`](docs/2026-07-24-docker-hardening.md) — non-root frontend container, restart policies, resource limits, and Trivy image scanning in CI

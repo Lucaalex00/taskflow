@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: taskflow-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: taskflow
       POSTGRES_USER: taskflow
@@ -15,12 +16,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
     container_name: taskflow-api
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,16 +36,27 @@ services:
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=taskflow;Username=taskflow;Password=taskflow"
     ports:
       - "5080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: taskflow-frontend
+    restart: unless-stopped
     depends_on:
       - api
     ports:
-      - "4200:80"
+      - "4200:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
 volumes:
   postgres-data:

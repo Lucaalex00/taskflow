@@ -151,6 +151,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
 
     steps:
       - uses: actions/checkout@v4
@@ -188,3 +189,32 @@ jobs:
           tags: |
             ghcr.io/${{ steps.image.outputs.repository }}/frontend:latest
             ghcr.io/${{ steps.image.outputs.repository }}/frontend:${{ github.sha }}
+
+      # Reports HIGH/CRITICAL CVEs in each published image (OS packages + .NET/npm
+      # dependencies) to the repo's Security tab. Non-blocking (exit-code 0) — a demo
+      # project shouldn't go red over a CVE in an upstream base image nobody's shipped a
+      # fix for yet, but it should still be visible.
+      - name: Scan API image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ghcr.io/${{ steps.image.outputs.repository }}/api:${{ github.sha }}
+          format: sarif
+          output: trivy-api.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: Scan frontend image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ghcr.io/${{ steps.image.outputs.repository }}/frontend:${{ github.sha }}
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: Upload vulnerability scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .
+          category: trivy

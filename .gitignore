@@ -27,6 +27,9 @@ Thumbs.db
 !.vscode/extensions.json
 .idea/
 
+# --- Claude Code local session state ---
+.claude/scheduled_tasks.lock
+
 # --- Test results ---
 TestResults/
 coverage/
