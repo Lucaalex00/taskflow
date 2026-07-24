@@ -25,6 +25,11 @@ export class NotificationService {
     );
   }
 
+  async markAllRead(): Promise<void> {
+    const unread = this.notifications().filter((n) => !n.isRead);
+    await Promise.all(unread.map((n) => this.markRead(n.id)));
+  }
+
   async respondToInvitation(invitationId: string, accept: boolean): Promise<void> {
     await firstValueFrom(
       this.http.post<void>(`${environment.apiUrl}/invitations/${invitationId}/respond`, { accept })

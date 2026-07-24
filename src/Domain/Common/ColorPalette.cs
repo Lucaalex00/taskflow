@@ -9,10 +9,13 @@ namespace TaskFlow.Domain.Common;
 /// </summary>
 public static partial class ColorPalette
 {
+    // Curated to the app's fixed violet/pink theme — every value sits in the purple→pink→indigo
+    // family so user avatars and board tags harmonize with the UI while staying distinguishable
+    // from one another.
     public static readonly IReadOnlyList<string> Colors =
     [
-        "#4fd1c5", "#f6ad55", "#fc8181", "#63b3ed",
-        "#b794f4", "#68d391", "#f687b3", "#f6e05e"
+        "#a855f7", "#ec4899", "#8b5cf6", "#d946ef",
+        "#f472b6", "#818cf8", "#c084fc", "#e879f9"
     ];
 
     public static string PickRandom() => Colors[Random.Shared.Next(Colors.Count)];

@@ -6,6 +6,14 @@ import { NotificationType, InvitationStatus } from '../../../core/models/notific
 
 const POLL_INTERVAL_MS = 20_000;
 
+/** Per-type presentation, so an invitation reads differently at a glance from a task update.
+ * `tone` maps to a CSS modifier that colors the left accent bar and the type chip. */
+const TYPE_META: Record<NotificationType, { label: string; icon: string; tone: string }> = {
+  [NotificationType.BoardInvitation]: { label: 'Invitation', icon: '✉', tone: 'invite' },
+  [NotificationType.TaskAssigned]: { label: 'Assigned', icon: '◆', tone: 'assigned' },
+  [NotificationType.TaskStateChanged]: { label: 'Update', icon: '↻', tone: 'update' }
+};
+
 @Component({
   selector: 'app-notification-bell',
   standalone: true,
@@ -37,12 +45,29 @@ export class NotificationBellComponent implements OnInit, OnDestroy {
     if (this.pollHandle) clearInterval(this.pollHandle);
   }
 
-  toggle(): void {
-    this.isOpen.set(!this.isOpen());
+  openDrawer(): void {
+    this.isOpen.set(true);
   }
 
-  async open(notificationId: string): Promise<void> {
+  closeDrawer(): void {
+    this.isOpen.set(false);
+  }
+
+  typeMeta(type: NotificationType): { label: string; icon: string; tone: string } {
+    return TYPE_META[type];
+  }
+
+  async markRead(notificationId: string): Promise<void> {
     await this.notificationService.markRead(notificationId);
+  }
+
+  async markAllRead(): Promise<void> {
+    this.errorMessage.set(null);
+    try {
+      await this.notificationService.markAllRead();
+    } catch {
+      this.errorMessage.set('Could not mark all as read.');
+    }
   }
 
   async respond(invitationId: string, accept: boolean): Promise<void> {

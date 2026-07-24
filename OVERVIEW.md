@@ -159,8 +159,10 @@ One folder per aggregate, one subfolder per use case:
   Cancelled hidden behind a counter), Owner-only task creation form, per-task valid-transition
   buttons (mirrors the backend state machine exactly, available to whoever the task is
   assigned to), live alert console with a connection-status indicator
-- **`shared/notification-bell`**: mounted in the app shell on every page — lists
-  invitations/assignments/state-changes, lets the user accept/decline an invitation inline
+- **`shared/notification-bell`**: mounted in the app shell on every page — a bell/badge that
+  opens a right-side notification **drawer**, type-colored (invitations pink, assignments
+  violet, updates indigo) with clear read/unread state, per-item and bulk "mark read", and
+  inline accept/decline for invitations
 
 ### 2.6 `tests`
 - **`UnitTests/Domain`**: `TaskItemTests` (full state-machine truth table via
@@ -298,3 +300,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-security-headers.md`](docs/2026-07-24-security-headers.md) — defensive HTTP headers on API + frontend, and a latent test-isolation bug it surfaced (integration tests were hitting the wrong Postgres)
 - [`docs/2026-07-24-stronger-password-policy.md`](docs/2026-07-24-stronger-password-policy.md) — a real password policy enforced server-side and mirrored by a live requirements checklist in the registration form
 - [`docs/2026-07-24-account-lockout.md`](docs/2026-07-24-account-lockout.md) — temporary per-account lockout after repeated failed logins, complementing the per-IP rate limiter
+- [`docs/2026-07-24-theme-and-notification-drawer.md`](docs/2026-07-24-theme-and-notification-drawer.md) — a fixed violet/pink dark theme and a redesigned, type-color-coded notification side drawer

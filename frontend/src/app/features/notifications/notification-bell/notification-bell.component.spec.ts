@@ -10,6 +10,7 @@ describe('NotificationBellComponent', () => {
     notifications: ReturnType<typeof signal<NotificationDto[]>>;
     refresh: jasmine.Spy;
     markRead: jasmine.Spy;
+    markAllRead: jasmine.Spy;
     respondToInvitation: jasmine.Spy;
   };
   let boardService: jasmine.SpyObj<BoardService>;
@@ -31,6 +32,7 @@ describe('NotificationBellComponent', () => {
       notifications: signal<NotificationDto[]>([]),
       refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
       markRead: jasmine.createSpy('markRead').and.resolveTo(undefined),
+      markAllRead: jasmine.createSpy('markAllRead').and.resolveTo(undefined),
       respondToInvitation: jasmine.createSpy('respondToInvitation').and.resolveTo(undefined)
     };
 
@@ -49,14 +51,22 @@ describe('NotificationBellComponent', () => {
     return { fixture, component: fixture.componentInstance };
   }
 
-  it('toggle flips isOpen', () => {
+  it('openDrawer and closeDrawer control isOpen', () => {
     const { component } = createComponent();
 
-    component.toggle();
+    component.openDrawer();
     expect(component.isOpen()).toBeTrue();
 
-    component.toggle();
+    component.closeDrawer();
     expect(component.isOpen()).toBeFalse();
+  });
+
+  it('typeMeta maps each notification type to a distinct tone', () => {
+    const { component } = createComponent();
+
+    expect(component.typeMeta(NotificationType.BoardInvitation).tone).toBe('invite');
+    expect(component.typeMeta(NotificationType.TaskAssigned).tone).toBe('assigned');
+    expect(component.typeMeta(NotificationType.TaskStateChanged).tone).toBe('update');
   });
 
   it('unreadCount counts only unread notifications', () => {
@@ -83,12 +93,20 @@ describe('NotificationBellComponent', () => {
     expect(notificationService.refresh).toHaveBeenCalledTimes(2);
   }));
 
-  it('open marks the notification as read', async () => {
+  it('markRead marks a single notification as read', async () => {
     const { component } = createComponent();
 
-    await component.open('notification-1');
+    await component.markRead('notification-1');
 
     expect(notificationService.markRead).toHaveBeenCalledWith('notification-1');
+  });
+
+  it('markAllRead delegates to the service', async () => {
+    const { component } = createComponent();
+
+    await component.markAllRead();
+
+    expect(notificationService.markAllRead).toHaveBeenCalled();
   });
 
   it('respond accepts an invitation and refreshes the board list', async () => {

@@ -32,7 +32,7 @@ test('owner invites a teammate who accepts, gets assigned a task, and cannot cre
   await ownerPage.getByRole('button', { name: 'Invite' }).click();
   await expect(inviteInput).toHaveValue('');
 
-  // Teammate sees and accepts the invitation from the notification bell. The bell only
+  // Teammate sees and accepts the invitation from the notification drawer. The bell only
   // fetches on load and then polls every 20s (see notification-bell.component.ts), so reload
   // rather than wait out the poll interval.
   await memberPage.reload();
@@ -40,10 +40,10 @@ test('owner invites a teammate who accepts, gets assigned a task, and cannot cre
   await expect(memberPage.getByText(`invited to join the board "${boardName}"`)).toBeVisible();
   await memberPage.getByRole('button', { name: 'Accept', exact: true }).click();
 
-  // Wait for the teammate's own board list to include the newly-joined board — that only
-  // happens after the accept has committed server-side, so it's a reliable signal that the
-  // owner's member list (once refreshed) will now include them.
-  await memberPage.locator('.notification-bell__toggle').click();
+  // Close the drawer, then wait for the teammate's own board list to include the newly-joined
+  // board — that only happens after the accept has committed server-side, so it's a reliable
+  // signal that the owner's member list (once refreshed) will now include them.
+  await memberPage.locator('.drawer__close').click();
   await expect(memberPage.locator('.board-card', { hasText: boardName })).toBeVisible();
 
   // Owner creates a task (doesn't need the member yet).

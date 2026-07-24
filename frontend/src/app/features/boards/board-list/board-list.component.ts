@@ -6,7 +6,7 @@ import { BoardService } from '../../../core/services/board.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 import { BoardDto } from '../../../core/models/board.model';
 
-const DEFAULT_BOARD_COLOR = '#4fd1c5';
+const DEFAULT_BOARD_COLOR = '#a855f7';
 
 @Component({
   selector: 'app-board-list',

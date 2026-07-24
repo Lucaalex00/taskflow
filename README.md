@@ -86,8 +86,8 @@ the test suite to back every one of them up.
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **229 automated tests** — 112 backend unit, 26 backend integration (against a real,
-  disposable Postgres container via Testcontainers), 85 frontend, 6 end-to-end (Playwright,
+- **231 automated tests** — 112 backend unit, 26 backend integration (against a real,
+  disposable Postgres container via Testcontainers), 87 frontend, 6 end-to-end (Playwright,
   driving two real browser contexts through the full owner/member workflow against the actual
   Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and a
   production build, on every push.
@@ -245,7 +245,7 @@ cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwrigh
 |---|---|---|
 | Backend unit | 112 | Domain rules (state machines, validation, color palette, password policy), CQRS handlers against an EF Core InMemory context |
 | Backend integration | 26 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, account lockout, security headers, board membership/roles, invitations, notifications, SignalR hub authorization |
-| Frontend | 85 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
+| Frontend | 87 | Services (HTTP contracts), components (behavior via mocked services), interceptors, guards |
 | End-to-end | 6 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
 ## Project structure

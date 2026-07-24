@@ -1,41 +1,81 @@
 <div class="notification-bell">
-  <button class="notification-bell__toggle" type="button" (click)="toggle()">
+  <button class="notification-bell__toggle" type="button" (click)="openDrawer()" aria-label="Notifications">
     <span class="notification-bell__icon" aria-hidden="true">&#128276;</span>
     @if (unreadCount() > 0) {
       <span class="notification-bell__badge mono">{{ unreadCount() }}</span>
     }
   </button>
+</div>
 
-  @if (isOpen()) {
-    <div class="notification-panel">
-      @if (errorMessage()) {
-        <p class="form-error">{{ errorMessage() }}</p>
-      }
+@if (isOpen()) {
+  <button class="drawer-backdrop" type="button" aria-label="Close notifications" (click)="closeDrawer()"></button>
 
+  <aside class="drawer" role="dialog" aria-label="Notifications">
+    <header class="drawer__header">
+      <div class="drawer__title-group">
+        <h2 class="drawer__title mono">Notifications</h2>
+        @if (unreadCount() > 0) {
+          <span class="drawer__unread-pill mono">{{ unreadCount() }} new</span>
+        }
+      </div>
+      <div class="drawer__header-actions">
+        @if (unreadCount() > 0) {
+          <button class="btn btn--ghost drawer__mark-all" type="button" (click)="markAllRead()">
+            Mark all read
+          </button>
+        }
+        <button class="drawer__close" type="button" (click)="closeDrawer()" aria-label="Close">&times;</button>
+      </div>
+    </header>
+
+    @if (errorMessage()) {
+      <p class="form-error drawer__error">{{ errorMessage() }}</p>
+    }
+
+    <div class="drawer__body">
       @if (notificationService.notifications().length === 0) {
-        <p class="notification-panel__empty mono muted">no notifications</p>
+        <div class="drawer__empty">
+          <p class="drawer__empty-icon" aria-hidden="true">&#128276;</p>
+          <p class="drawer__empty-title mono">You're all caught up</p>
+          <p class="drawer__empty-subtitle muted">Invitations and task updates will show up here.</p>
+        </div>
       } @else {
         <ul class="notification-list">
           @for (notification of notificationService.notifications(); track notification.id) {
             <li
               class="notification-item"
+              [attr.data-tone]="typeMeta(notification.type).tone"
               [class.notification-item--unread]="!notification.isRead"
-              [attr.tabindex]="notification.isRead ? null : 0"
-              [attr.role]="notification.isRead ? null : 'button'"
-              (click)="!notification.isRead && open(notification.id)"
-              (keydown.enter)="!notification.isRead && open(notification.id)"
             >
+              <div class="notification-item__head">
+                <span class="type-chip" [attr.data-tone]="typeMeta(notification.type).tone">
+                  <span class="type-chip__icon" aria-hidden="true">{{ typeMeta(notification.type).icon }}</span>
+                  {{ typeMeta(notification.type).label }}
+                </span>
+                @if (!notification.isRead) {
+                  <span class="notification-item__dot" aria-label="unread"></span>
+                }
+              </div>
+
               <p class="notification-item__message">{{ notification.message }}</p>
-              <span class="notification-item__time mono muted">
-                {{ notification.createdAtUtc | date: 'MMM d, HH:mm' }}
-              </span>
+
+              <div class="notification-item__foot">
+                <span class="notification-item__time mono muted">
+                  {{ notification.createdAtUtc | date: 'MMM d, HH:mm' }}
+                </span>
+                @if (!notification.isRead) {
+                  <button class="notification-item__mark" type="button" (click)="markRead(notification.id)">
+                    Mark read
+                  </button>
+                }
+              </div>
 
               @if (notification.type === NotificationType.BoardInvitation && notification.invitationStatus === InvitationStatus.Pending) {
                 <div class="notification-item__actions">
-                  <button class="btn btn--primary" type="button" (click)="respond(notification.invitationId!, true); $event.stopPropagation()">
+                  <button class="btn btn--primary" type="button" (click)="respond(notification.invitationId!, true)">
                     Accept
                   </button>
-                  <button class="btn btn--ghost" type="button" (click)="respond(notification.invitationId!, false); $event.stopPropagation()">
+                  <button class="btn btn--ghost" type="button" (click)="respond(notification.invitationId!, false)">
                     Decline
                   </button>
                 </div>
@@ -47,5 +87,5 @@
         </ul>
       }
     </div>
-  }
-</div>
+  </aside>
+}
