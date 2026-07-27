@@ -115,9 +115,25 @@
               <span class="column__count mono">{{ tasksByColumn().get(column)?.length ?? 0 }}</span>
             </div>
 
-            <div class="column__body">
+            <div
+              class="column__body"
+              cdkDropList
+              [id]="'column-' + column"
+              [cdkDropListData]="column"
+              [cdkDropListConnectedTo]="connectedDropListsFor(column)"
+              (cdkDropListDropped)="onTaskDropped($event)"
+            >
               @for (task of tasksByColumn().get(column); track task.id) {
-                <div class="task-card" [attr.data-state]="task.state" [class.task-card--overdue]="task.isOverdue">
+                <div
+                  class="task-card"
+                  cdkDrag
+                  [cdkDragData]="task"
+                  [attr.data-state]="task.state"
+                  [class.task-card--overdue]="task.isOverdue"
+                >
+                  <div class="task-card__drag-preview" *cdkDragPreview [attr.data-state]="task.state">
+                    {{ task.title }}
+                  </div>
                   <div class="task-card__top">
                     <span class="priority-tag" [attr.data-priority]="task.priority">{{ task.priority }}</span>
                     @if (task.isOverdue) {

@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
@@ -38,13 +39,13 @@ const COLUMN_LABELS: Record<TaskState, string> = {
 @Component({
   selector: 'app-board-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AvatarComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AvatarComponent, DragDropModule],
   templateUrl: './board-detail.component.html',
   styleUrl: './board-detail.component.scss'
 })
 export class BoardDetailComponent implements OnInit, OnDestroy {
   readonly boardId: string;
-  readonly columns = BOARD_COLUMNS;
+  readonly columns: TaskState[] = [...BOARD_COLUMNS];
   readonly columnLabels = COLUMN_LABELS;
   readonly TaskPriority = TaskPriority;
   readonly AlertSeverity = AlertSeverity;
@@ -115,6 +116,27 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
 
   transitionsFor(task: TaskDto): TaskState[] {
     return ALLOWED_TRANSITIONS[task.state];
+  }
+
+  /** The other columns this column's cards may be dragged into (a valid transition exists from
+   * that column's state). Used to wire up cdkDropListConnectedTo so CDK only allows real moves. */
+  connectedDropListsFor(column: TaskState): string[] {
+    return BOARD_COLUMNS.filter((c) => c !== column && ALLOWED_TRANSITIONS[column].includes(c)).map(
+      (c) => `column-${c}`
+    );
+  }
+
+  async onTaskDropped(event: CdkDragDrop<TaskState>): Promise<void> {
+    const target = event.container.data;
+    const source = event.previousContainer.data;
+    const task = event.item.data as TaskDto;
+
+    // Same column, or a transition the domain wouldn't allow → snap back, do nothing.
+    if (target === source || !ALLOWED_TRANSITIONS[source]?.includes(target)) {
+      return;
+    }
+
+    await this.moveTask(task, target);
   }
 
   async moveTask(task: TaskDto, newState: TaskState): Promise<void> {
