@@ -158,6 +158,60 @@ describe('BoardDetailComponent', () => {
     expect(component.transitionsFor({ ...task, state: TaskState.Done })).toEqual([]);
   });
 
+  it('filters tasks by search text (title or description)', async () => {
+    const other: TaskDto = { ...task, id: 'task-2', title: 'Deploy to prod', description: 'infra' };
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([task, other]);
+    await component.ngOnInit();
+
+    component.searchText.set('deploy');
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([other]);
+
+    component.searchText.set('infra'); // matches the description
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([other]);
+
+    component.searchText.set('nothing-matches');
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([]);
+  });
+
+  it('filters tasks by assignee, including an "unassigned" option', async () => {
+    const assigned: TaskDto = { ...task, id: 'task-2', assigneeId: 'user-9' };
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([task, assigned]); // task is unassigned
+    await component.ngOnInit();
+
+    component.assigneeFilter.set('user-9');
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([assigned]);
+
+    component.assigneeFilter.set('unassigned');
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([task]);
+  });
+
+  it('filters tasks by priority', async () => {
+    const high: TaskDto = { ...task, id: 'task-2', priority: TaskPriority.High };
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([task, high]); // task is Medium
+    await component.ngOnInit();
+
+    component.priorityFilter.set(TaskPriority.High);
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([high]);
+  });
+
+  it('clearFilters resets every filter and hasActiveFilters', async () => {
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([task]);
+    await component.ngOnInit();
+
+    component.searchText.set('x');
+    component.assigneeFilter.set('unassigned');
+    component.priorityFilter.set(TaskPriority.High);
+    expect(component.hasActiveFilters()).toBeTrue();
+
+    component.clearFilters();
+    expect(component.hasActiveFilters()).toBeFalse();
+    expect(component.tasksByColumn().get(TaskState.Todo)).toEqual([task]);
+  });
+
   it('moveTask transitions the task and reloads the board', async () => {
     const { component } = createComponent();
     taskService.transitionState.and.resolveTo(undefined);

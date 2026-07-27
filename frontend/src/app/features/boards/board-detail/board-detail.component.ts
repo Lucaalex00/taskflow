@@ -59,13 +59,41 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   readonly isTaskFormOpen = signal(false);
   readonly isMembersOpen = signal(false);
 
+  // Board filters. searchText matches title/description; assigneeFilter is a userId,
+  // 'unassigned', or '' (all); priorityFilter is a TaskPriority or 'all'.
+  readonly searchText = signal('');
+  readonly assigneeFilter = signal<string>('');
+  readonly priorityFilter = signal<TaskPriority | 'all'>('all');
+
+  readonly hasActiveFilters = computed(
+    () => this.searchText().trim() !== '' || this.assigneeFilter() !== '' || this.priorityFilter() !== 'all'
+  );
+
+  private readonly filteredTasks = computed(() => {
+    const query = this.searchText().trim().toLowerCase();
+    const assignee = this.assigneeFilter();
+    const priority = this.priorityFilter();
+
+    return this.tasks().filter((t) => {
+      if (query && !`${t.title} ${t.description ?? ''}`.toLowerCase().includes(query)) return false;
+      if (assignee === 'unassigned' && t.assigneeId) return false;
+      if (assignee !== '' && assignee !== 'unassigned' && t.assigneeId !== assignee) return false;
+      if (priority !== 'all' && t.priority !== priority) return false;
+      return true;
+    });
+  });
+
   readonly tasksByColumn = computed(() => {
     const grouped = new Map<TaskState, TaskDto[]>();
     for (const column of BOARD_COLUMNS) {
-      grouped.set(column, this.tasks().filter((t) => t.state === column));
+      grouped.set(column, this.filteredTasks().filter((t) => t.state === column));
     }
     return grouped;
   });
+
+  readonly visibleTaskCount = computed(
+    () => this.filteredTasks().filter((t) => t.state !== TaskState.Cancelled).length
+  );
 
   readonly cancelledCount = computed(
     () => this.tasks().filter((t) => t.state === TaskState.Cancelled).length
@@ -112,6 +140,12 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   async ngOnDestroy(): Promise<void> {
     if (this.membersPollHandle) clearInterval(this.membersPollHandle);
     await this.alertService.disconnect();
+  }
+
+  clearFilters(): void {
+    this.searchText.set('');
+    this.assigneeFilter.set('');
+    this.priorityFilter.set('all');
   }
 
   transitionsFor(task: TaskDto): TaskState[] {

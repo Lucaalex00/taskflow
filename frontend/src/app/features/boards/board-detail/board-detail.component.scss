@@ -124,6 +124,48 @@
   flex: 1;
 }
 
+.board-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.board-filters__search {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.board-filters__search .field__input {
+  width: 100%;
+  padding-left: 34px;
+}
+
+.board-filters__search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.board-filters .field__select {
+  min-width: 150px;
+}
+
+.board-filters__clear {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.board-filters__count {
+  font-size: 12px;
+}
+
 .kanban__columns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

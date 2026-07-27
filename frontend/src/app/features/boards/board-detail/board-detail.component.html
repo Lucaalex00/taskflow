@@ -104,6 +104,55 @@
     @if (isLoading()) {
       <p class="mono muted">loading tasks…</p>
     } @else {
+      <div class="board-filters">
+        <div class="board-filters__search">
+          <span class="board-filters__search-icon" aria-hidden="true">&#128269;</span>
+          <input
+            class="field__input"
+            type="search"
+            name="taskSearch"
+            [ngModel]="searchText()"
+            (ngModelChange)="searchText.set($event)"
+            placeholder="Search tasks…"
+            aria-label="Search tasks"
+          />
+        </div>
+
+        <select
+          class="field__select"
+          name="assigneeFilter"
+          [ngModel]="assigneeFilter()"
+          (ngModelChange)="assigneeFilter.set($event)"
+          aria-label="Filter by assignee"
+        >
+          <option value="">All assignees</option>
+          <option value="unassigned">Unassigned</option>
+          @for (m of members(); track m.userId) {
+            <option [value]="m.userId">{{ m.displayName }}</option>
+          }
+        </select>
+
+        <select
+          class="field__select"
+          name="priorityFilter"
+          [ngModel]="priorityFilter()"
+          (ngModelChange)="priorityFilter.set($event)"
+          aria-label="Filter by priority"
+        >
+          <option value="all">All priorities</option>
+          @for (p of [TaskPriority.Low, TaskPriority.Medium, TaskPriority.High, TaskPriority.Critical]; track p) {
+            <option [value]="p">{{ p }}</option>
+          }
+        </select>
+
+        @if (hasActiveFilters()) {
+          <button class="btn btn--ghost board-filters__clear" type="button" (click)="clearFilters()">
+            Clear filters
+          </button>
+          <span class="board-filters__count mono muted">{{ visibleTaskCount() }} shown</span>
+        }
+      </div>
+
       <div class="kanban__columns">
         @for (column of columns; track column) {
           <div class="column" [attr.data-state]="column">
