@@ -7,6 +7,7 @@ import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 import { BoardService } from '../../../core/services/board.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { TaskDto, TaskState, TaskPriority } from '../../../core/models/task.model';
 import { AlertSeverity } from '../../../core/models/alert.model';
 import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
@@ -121,6 +122,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     private readonly route: ActivatedRoute,
     private readonly taskService: TaskService,
     private readonly boardService: BoardService,
+    private readonly toast: ToastService,
     readonly alertService: AlertService,
     readonly currentUser: CurrentUserService
   ) {
@@ -177,8 +179,9 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     try {
       await this.taskService.transitionState(task.id, newState);
       await this.loadTasks();
+      this.toast.success(`Moved "${task.title}" to ${COLUMN_LABELS[newState]}.`);
     } catch {
-      this.errorMessage.set(`Could not move "${task.title}" to ${COLUMN_LABELS[newState]}.`);
+      this.toast.error(`Could not move "${task.title}" to ${COLUMN_LABELS[newState]}.`);
     }
   }
 
@@ -195,8 +198,10 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     try {
       await this.taskService.assign(task.id, userId);
       await this.loadTasks();
+      const assignee = this.members().find((m) => m.userId === userId)?.displayName;
+      this.toast.success(assignee ? `Assigned "${task.title}" to ${assignee}.` : `Assigned "${task.title}".`);
     } catch {
-      this.errorMessage.set(`Could not assign "${task.title}".`);
+      this.toast.error(`Could not assign "${task.title}".`);
     }
   }
 
@@ -224,6 +229,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
         dueAtUtc: this.newTaskDueDate ? new Date(this.newTaskDueDate).toISOString() : null
       });
 
+      const createdTitle = this.newTaskTitle.trim();
       this.newTaskTitle = '';
       this.newTaskDescription = '';
       this.newTaskPriority = TaskPriority.Medium;
@@ -231,6 +237,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
       this.isTaskFormOpen.set(false);
 
       await this.loadTasks();
+      this.toast.success(`Task "${createdTitle}" created.`);
     } catch {
       this.errorMessage.set('Could not create the task. Check the title and due date.');
     } finally {

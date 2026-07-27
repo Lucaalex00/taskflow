@@ -237,7 +237,9 @@
                   </div>
                 </div>
               } @empty {
-                <p class="column__empty mono muted">—</p>
+                <p class="column__empty mono muted">
+                  {{ hasActiveFilters() ? 'No matches' : 'No tasks' }}
+                </p>
               }
             </div>
           </div>

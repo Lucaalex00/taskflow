@@ -6,6 +6,7 @@ import { TaskService } from '../../../core/services/task.service';
 import { AlertService } from '../../../core/services/alert.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 import { BoardService } from '../../../core/services/board.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { TaskDto, TaskPriority, TaskState } from '../../../core/models/task.model';
 import { AlertDto, AlertSeverity } from '../../../core/models/alert.model';
 import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
@@ -20,6 +21,7 @@ describe('BoardDetailComponent', () => {
     markRead: jasmine.Spy;
   };
   let currentUser: jasmine.SpyObj<CurrentUserService>;
+  let toast: jasmine.SpyObj<ToastService>;
 
   const task: TaskDto = {
     id: 'task-1',
@@ -79,6 +81,8 @@ describe('BoardDetailComponent', () => {
     currentUser = jasmine.createSpyObj<CurrentUserService>('CurrentUserService', ['userId']);
     currentUser.userId.and.returnValue('user-1');
 
+    toast = jasmine.createSpyObj<ToastService>('ToastService', ['success', 'error', 'info']);
+
     TestBed.configureTestingModule({
       imports: [BoardDetailComponent],
       providers: [
@@ -86,6 +90,7 @@ describe('BoardDetailComponent', () => {
         { provide: BoardService, useValue: boardService },
         { provide: AlertService, useValue: alertService },
         { provide: CurrentUserService, useValue: currentUser },
+        { provide: ToastService, useValue: toast },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { paramMap: convertToParamMap({ id: 'board-1' }) } }
@@ -223,13 +228,23 @@ describe('BoardDetailComponent', () => {
     expect(taskService.getBoardTasks).toHaveBeenCalled();
   });
 
-  it('moveTask sets an error message when the transition fails', async () => {
+  it('moveTask shows a success toast on success', async () => {
+    const { component } = createComponent();
+    taskService.transitionState.and.resolveTo(undefined);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.moveTask(task, TaskState.InProgress);
+
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('moveTask shows an error toast when the transition fails', async () => {
     const { component } = createComponent();
     taskService.transitionState.and.rejectWith(new Error('boom'));
 
     await component.moveTask(task, TaskState.InProgress);
 
-    expect(component.errorMessage()).toContain('Could not move');
+    expect(toast.error).toHaveBeenCalledWith(jasmine.stringContaining('Could not move'));
   });
 
   it('assignToSelf assigns the task to the current user', async () => {
@@ -261,13 +276,13 @@ describe('BoardDetailComponent', () => {
     expect(taskService.assign).not.toHaveBeenCalled();
   });
 
-  it('assignTo sets an error message when it fails', async () => {
+  it('assignTo shows an error toast when it fails', async () => {
     const { component } = createComponent();
     taskService.assign.and.rejectWith(new Error('boom'));
 
     await component.assignTo(task, 'user-2');
 
-    expect(component.errorMessage()).toContain('Could not assign');
+    expect(toast.error).toHaveBeenCalledWith(jasmine.stringContaining('Could not assign'));
   });
 
   it('assigneeName resolves the display name from the loaded members, or null when unassigned', async () => {
