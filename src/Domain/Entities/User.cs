@@ -59,6 +59,17 @@ public class User : Entity
             DisplayName = newDisplayName.Trim();
     }
 
+    /// <summary>Changes the user's avatar color. Returns a failure result (rather than throwing)
+    /// for an invalid hex, so the caller can surface it as a validation error.</summary>
+    public Result SetColor(string hexColor)
+    {
+        if (!ColorPalette.IsValidHex(hexColor))
+            return Result.Failure("Color must be a valid hex value like #a855f7.");
+
+        Color = hexColor;
+        return Result.Success();
+    }
+
     /// <summary>True while a lockout window is active. Callers must refuse login when this
     /// returns true, regardless of whether the supplied password is correct.</summary>
     public bool IsLockedOut(DateTime nowUtc) => LockoutEndUtc is { } end && end > nowUtc;

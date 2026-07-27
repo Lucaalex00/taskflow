@@ -38,4 +38,31 @@ public class UserTests
         result.IsSuccess.Should().BeTrue();
         ColorPalette.Colors.Should().Contain(result.Value.Color);
     }
+
+    [Fact]
+    public void SetColor_WithAValidHex_UpdatesTheColor()
+    {
+        var user = User.Create("alice@example.com", "Alice", "hash").Value;
+
+        var result = user.SetColor("#123abc");
+
+        result.IsSuccess.Should().BeTrue();
+        user.Color.Should().Be("#123abc");
+    }
+
+    [Theory]
+    [InlineData("123abc")]     // missing #
+    [InlineData("#fff")]        // too short
+    [InlineData("#gggggg")]     // not hex
+    [InlineData("")]
+    public void SetColor_WithAnInvalidHex_FailsAndLeavesTheColorUnchanged(string invalid)
+    {
+        var user = User.Create("alice@example.com", "Alice", "hash").Value;
+        var original = user.Color;
+
+        var result = user.SetColor(invalid);
+
+        result.IsSuccess.Should().BeFalse();
+        user.Color.Should().Be(original);
+    }
 }

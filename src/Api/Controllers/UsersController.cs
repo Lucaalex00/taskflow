@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TaskFlow.Application.Users;
 using TaskFlow.Application.Users.Commands.CreateUser;
+using TaskFlow.Application.Users.Commands.UpdateUserColor;
 using TaskFlow.Application.Users.Queries.GetUsers;
 
 namespace TaskFlow.Api.Controllers;
@@ -33,4 +34,16 @@ public sealed class UsersController(ISender sender) : ControllerBase
         var result = await sender.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetAll), null, result);
     }
+
+    /// <summary>Updates the signed-in user's avatar color (the user is taken from the token).</summary>
+    [HttpPatch("me/color")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateMyColor(UpdateUserColorRequest request, CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new UpdateUserColorCommand(request.Color), cancellationToken);
+        return Ok(result);
+    }
 }
+
+public sealed record UpdateUserColorRequest(string Color);
