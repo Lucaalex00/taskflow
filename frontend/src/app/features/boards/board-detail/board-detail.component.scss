@@ -137,31 +137,63 @@
 }
 
 .column {
+  --state-color: var(--color-text-muted);
+  --state-tint: transparent;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  border-top: 2px solid var(--state-color);
   border-radius: var(--radius-md);
   min-height: 120px;
   display: flex;
   flex-direction: column;
 }
 
+/* Conventional traffic-light state colors, so the board reads the way people expect. */
+.column[data-state='Todo'] { --state-color: var(--state-todo); --state-tint: var(--state-todo-dim); }
+.column[data-state='InProgress'] { --state-color: var(--state-inprogress); --state-tint: var(--state-inprogress-dim); }
+.column[data-state='Blocked'] { --state-color: var(--state-blocked); --state-tint: var(--state-blocked-dim); }
+.column[data-state='Done'] { --state-color: var(--state-done); --state-tint: var(--state-done-dim); }
+
 .column__header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
   border-bottom: 1px solid var(--color-border);
+  background: var(--state-tint);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .column__label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-muted);
+  color: var(--state-color);
+}
+
+.column__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--state-color);
+  flex-shrink: 0;
 }
 
 .column__count {
   font-size: 11px;
-  color: var(--color-text-muted);
+  font-weight: 600;
+  color: var(--state-color);
+  background: var(--state-tint);
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .column__body {
@@ -179,9 +211,10 @@
 }
 
 .task-card {
+  --state-color: var(--color-border);
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-border);
+  border-left: 3px solid var(--state-color);
   border-radius: var(--radius-sm);
   padding: 12px;
   display: flex;
@@ -189,8 +222,14 @@
   gap: 8px;
 }
 
+.task-card[data-state='Todo'] { --state-color: var(--state-todo); }
+.task-card[data-state='InProgress'] { --state-color: var(--state-inprogress); }
+.task-card[data-state='Blocked'] { --state-color: var(--state-blocked); }
+.task-card[data-state='Done'] { --state-color: var(--state-done); }
+
+/* Overdue always wins the accent bar — an at-risk task should shout regardless of column. */
 .task-card--overdue {
-  border-left-color: var(--color-critical);
+  --state-color: var(--color-critical);
 }
 
 .task-card__top {
@@ -279,6 +318,14 @@
   padding: 5px 8px;
   font-size: 11px;
 }
+
+/* Transition buttons hint their target state's color, so "→ Done" reads green and
+ * "→ Blocked" reads red before you even read the label. */
+.transition-btn[data-state='Todo']:hover:not(:disabled) { border-color: var(--state-todo); color: var(--state-todo); }
+.transition-btn[data-state='InProgress']:hover:not(:disabled) { border-color: var(--state-inprogress); color: var(--state-inprogress); }
+.transition-btn[data-state='Blocked']:hover:not(:disabled) { border-color: var(--state-blocked); color: var(--state-blocked); }
+.transition-btn[data-state='Done']:hover:not(:disabled) { border-color: var(--state-done); color: var(--state-done); }
+.transition-btn[data-state='Cancelled']:hover:not(:disabled) { border-color: var(--color-text-muted); color: var(--color-text-muted); }
 
 .cancelled-note {
   font-size: 12px;

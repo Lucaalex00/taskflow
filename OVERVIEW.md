@@ -301,3 +301,4 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-stronger-password-policy.md`](docs/2026-07-24-stronger-password-policy.md) — a real password policy enforced server-side and mirrored by a live requirements checklist in the registration form
 - [`docs/2026-07-24-account-lockout.md`](docs/2026-07-24-account-lockout.md) — temporary per-account lockout after repeated failed logins, complementing the per-IP rate limiter
 - [`docs/2026-07-24-theme-and-notification-drawer.md`](docs/2026-07-24-theme-and-notification-drawer.md) — a fixed violet/pink dark theme and a redesigned, type-color-coded notification side drawer
+- [`docs/2026-07-27-state-color-coded-kanban.md`](docs/2026-07-27-state-color-coded-kanban.md) — traffic-light color coding for the Kanban columns and task cards (grey/amber/red/green by state)

@@ -106,15 +106,18 @@
     } @else {
       <div class="kanban__columns">
         @for (column of columns; track column) {
-          <div class="column">
+          <div class="column" [attr.data-state]="column">
             <div class="column__header">
-              <span class="column__label mono">{{ columnLabels[column] }}</span>
+              <span class="column__label mono">
+                <span class="column__swatch" aria-hidden="true"></span>
+                {{ columnLabels[column] }}
+              </span>
               <span class="column__count mono">{{ tasksByColumn().get(column)?.length ?? 0 }}</span>
             </div>
 
             <div class="column__body">
               @for (task of tasksByColumn().get(column); track task.id) {
-                <div class="task-card" [class.task-card--overdue]="task.isOverdue">
+                <div class="task-card" [attr.data-state]="task.state" [class.task-card--overdue]="task.isOverdue">
                   <div class="task-card__top">
                     <span class="priority-tag" [attr.data-priority]="task.priority">{{ task.priority }}</span>
                     @if (task.isOverdue) {
@@ -160,7 +163,7 @@
                     }
 
                     @for (nextState of transitionsFor(task); track nextState) {
-                      <button class="btn btn--ghost" (click)="moveTask(task, nextState)">
+                      <button class="btn btn--ghost transition-btn" [attr.data-state]="nextState" (click)="moveTask(task, nextState)">
                         &rarr; {{ columnLabels[nextState] }}
                       </button>
                     }

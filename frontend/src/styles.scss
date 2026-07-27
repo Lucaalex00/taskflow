@@ -27,6 +27,20 @@
   --color-info: #818cf8;
   --color-info-dim: rgba(129, 140, 248, 0.15);
   --color-success: #34d399;
+  --color-success-dim: rgba(52, 211, 153, 0.15);
+
+  /* Task-state semantics — the conventional traffic-light associations people expect on a
+   * board (grey "to do", amber "in progress", red "blocked", green "done"), each with a dim
+   * tint for backgrounds. Kept distinct from the violet/pink brand accents on purpose: state
+   * should read the same way it does in every other tracker. */
+  --state-todo: #94a3b8;
+  --state-todo-dim: rgba(148, 163, 184, 0.14);
+  --state-inprogress: #f0a94b;
+  --state-inprogress-dim: rgba(240, 169, 75, 0.15);
+  --state-blocked: #f43f5e;
+  --state-blocked-dim: rgba(244, 63, 94, 0.15);
+  --state-done: #34d399;
+  --state-done-dim: rgba(52, 211, 153, 0.15);
 
   /* Type */
   --font-display: 'IBM Plex Mono', ui-monospace, monospace;
