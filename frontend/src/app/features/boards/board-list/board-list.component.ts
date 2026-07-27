@@ -67,11 +67,6 @@ export class BoardListComponent implements OnInit {
     return board.ownerId === this.currentUser.userId();
   }
 
-  signOut(): void {
-    this.currentUser.signOut();
-    this.router.navigateByUrl('/login');
-  }
-
   private async loadBoards(): Promise<void> {
     this.isLoading.set(true);
     try {

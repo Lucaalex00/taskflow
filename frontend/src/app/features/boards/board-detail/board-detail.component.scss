@@ -289,7 +289,18 @@
 .assignee-display {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+}
+
+.assignee-display__who {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.assignee-display__name {
+  font-size: 12px;
+  color: var(--color-text);
 }
 
 .assignee-display .field__label {

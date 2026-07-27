@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { registerUser, loginAs } from './helpers';
+import { registerUser, loginAs, signOut } from './helpers';
 
 test.describe('Authentication', () => {
   test('an unauthenticated visitor is redirected to /login', async ({ page }) => {
@@ -10,7 +10,7 @@ test.describe('Authentication', () => {
   test('register, sign out, and sign back in with the same credentials', async ({ page }) => {
     const user = await registerUser(page, 'Ada Lovelace');
 
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signOut(page);
     await expect(page).toHaveURL(/\/login$/);
 
     await loginAs(page, user);
@@ -19,7 +19,7 @@ test.describe('Authentication', () => {
 
   test('signing in with the wrong password shows an error and does not navigate away', async ({ page }) => {
     const user = await registerUser(page, 'Grace Hopper');
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signOut(page);
 
     await page.goto('/login');
     await page.getByPlaceholder('you@example.com').fill(user.email);

@@ -9,6 +9,7 @@ import { BoardService } from '../../../core/services/board.service';
 import { TaskDto, TaskState, TaskPriority } from '../../../core/models/task.model';
 import { AlertSeverity } from '../../../core/models/alert.model';
 import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
+import { AvatarComponent } from '../../../shared/avatar/avatar.component';
 
 /** Mirrors TaskItem's state machine in the Domain layer (see TaskItem.IsValidTransition). */
 const ALLOWED_TRANSITIONS: Record<TaskState, TaskState[]> = {
@@ -37,7 +38,7 @@ const COLUMN_LABELS: Record<TaskState, string> = {
 @Component({
   selector: 'app-board-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, AvatarComponent],
   templateUrl: './board-detail.component.html',
   styleUrl: './board-detail.component.scss'
 })

@@ -28,7 +28,6 @@ describe('BoardListComponent', () => {
     (boardService as unknown as { boards: ReturnType<typeof signal<BoardDto[]>> }).boards = signal<BoardDto[]>([]);
     boardService.refresh.and.resolveTo(undefined);
     currentUser = jasmine.createSpyObj<CurrentUserService>('CurrentUserService', [
-      'signOut',
       'userId',
       'displayName'
     ]);
@@ -106,14 +105,5 @@ describe('BoardListComponent', () => {
 
     expect(component.isOwnBoard(board)).toBeTrue();
     expect(component.isOwnBoard({ ...board, ownerId: 'someone-else' })).toBeFalse();
-  });
-
-  it('signOut signs the user out and redirects to /login', () => {
-    const { component } = createComponent();
-
-    component.signOut();
-
-    expect(currentUser.signOut).toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/login');
   });
 });

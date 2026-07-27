@@ -31,6 +31,12 @@ export async function registerUser(page: Page, displayName: string): Promise<Reg
   return user;
 }
 
+/** Signs out via the shell-header user menu (the avatar opens a menu holding "Sign out"). */
+export async function signOut(page: Page): Promise<void> {
+  await page.locator('.user-menu__trigger').click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+}
+
 /** Signs in as an already-registered user through the real UI. Assumes the login form defaults
  * to sign-in mode (it does — "Register" must be actively selected to switch away from it). */
 export async function loginAs(page: Page, user: RegisteredUser): Promise<void> {

@@ -1,0 +1,37 @@
+<div class="user-menu">
+  <button class="user-menu__trigger" type="button" (click)="toggle()" [attr.aria-expanded]="isOpen()">
+    <app-avatar [name]="currentUser.displayName()" [color]="currentUser.color()" size="md" />
+  </button>
+
+  @if (isOpen()) {
+    <button class="user-menu__backdrop" type="button" aria-label="Close menu" (click)="close()"></button>
+
+    <div class="user-menu__panel" role="menu">
+      <div class="user-menu__identity">
+        <app-avatar [name]="currentUser.displayName()" [color]="currentUser.color()" size="lg" />
+        <div class="user-menu__who">
+          <span class="user-menu__name">{{ currentUser.displayName() }}</span>
+          <span class="user-menu__hint mono muted">signed in</span>
+        </div>
+      </div>
+
+      <label class="user-menu__color">
+        <span class="user-menu__color-label">Avatar color</span>
+        <input
+          type="color"
+          class="user-menu__color-input"
+          [value]="currentUser.color() ?? '#a855f7'"
+          (input)="onColorInput($event)"
+          [disabled]="isSavingColor()"
+          title="Pick your avatar color"
+        />
+      </label>
+
+      @if (errorMessage()) {
+        <p class="form-error user-menu__error">{{ errorMessage() }}</p>
+      }
+
+      <button class="btn btn--ghost user-menu__signout" type="button" (click)="signOut()">Sign out</button>
+    </div>
+  }
+</div>

@@ -62,7 +62,7 @@ test('owner invites a teammate who accepts, gets assigned a task, and cannot cre
     await ownerPage.reload();
     const card = ownerPage.locator('.task-card', { hasText: taskTitle });
     await card.locator('select').selectOption({ label: member.displayName });
-    await expect(card.getByText(`Assigned to ${member.displayName}`)).toBeVisible({ timeout: 2000 });
+    await expect(card.locator(".assignee-display__name", { hasText: member.displayName })).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 15_000 });
 
   // Teammate opens the newly-joined board (already visible in their list from the accept
@@ -71,7 +71,7 @@ test('owner invites a teammate who accepts, gets assigned a task, and cannot cre
   await memberPage.locator('.board-card', { hasText: boardName }).click();
   const memberTaskCard = memberPage.locator('.task-card', { hasText: taskTitle });
   await expect(memberTaskCard).toBeVisible();
-  await expect(memberTaskCard.getByText(`Assigned to ${member.displayName}`)).toBeVisible();
+  await expect(memberTaskCard.locator(".assignee-display__name", { hasText: member.displayName })).toBeVisible();
 
   // A Member never sees task-creation or self/other-assignment controls — those are Owner-only.
   await expect(memberPage.getByRole('button', { name: '+ New task' })).toHaveCount(0);

@@ -21,7 +21,7 @@
         <ul class="member-list">
           @for (member of members(); track member.userId) {
             <li class="member-list__item">
-              <span class="color-dot" [style.background]="member.color"></span>
+              <app-avatar [name]="member.displayName" [color]="member.color" size="sm" />
               <span class="member-list__name">{{ member.displayName }}</span>
               @if (isOwner()) {
                 <select
@@ -136,11 +136,13 @@
                   }
 
                   <div class="assignee-display">
-                    <span class="field__label">
-                      @if (assigneeColor(task)) {
-                        <span class="color-dot" [style.background]="assigneeColor(task)"></span>
+                    <span class="assignee-display__who">
+                      @if (assigneeName(task)) {
+                        <app-avatar [name]="assigneeName(task)" [color]="assigneeColor(task)" size="sm" />
+                        <span class="assignee-display__name">{{ assigneeName(task) }}</span>
+                      } @else {
+                        <span class="field__label">Unassigned</span>
                       }
-                      {{ assigneeName(task) ? 'Assigned to ' + assigneeName(task) : 'Unassigned' }}
                     </span>
 
                     @if (isOwner()) {

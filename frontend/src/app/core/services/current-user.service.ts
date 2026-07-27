@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResult, CreateUserRequest, LoginRequest } from '../models/user.model';
+import { AuthResult, CreateUserRequest, LoginRequest, UserDto } from '../models/user.model';
 
 const STORAGE_KEY_TOKEN = 'taskflow.authToken';
 const STORAGE_KEY_USER_ID = 'taskflow.currentUserId';
@@ -43,6 +43,17 @@ export class CurrentUserService {
     );
 
     this.applyAuthResult(result);
+  }
+
+  /** Changes the signed-in user's avatar color and persists the new value locally so every
+   * avatar (header, member lists, task cards) reflects it immediately. */
+  async updateColor(color: string): Promise<void> {
+    const result = await firstValueFrom(
+      this.http.patch<UserDto>(`${environment.apiUrl}/users/me/color`, { color })
+    );
+
+    localStorage.setItem(STORAGE_KEY_COLOR, result.color);
+    this.colorSignal.set(result.color);
   }
 
   signOut(): void {
