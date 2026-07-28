@@ -163,6 +163,23 @@ describe('BoardDetailComponent', () => {
     expect(component.transitionsFor({ ...task, state: TaskState.Done })).toEqual([]);
   });
 
+  it('connectedDropListsFor only offers columns a card may legally be dragged into', () => {
+    const { component } = createComponent();
+
+    // Todo can only move to In progress (Cancelled has no column) — never straight to Done/Blocked.
+    expect(component.connectedDropListsFor(TaskState.Todo)).toEqual(['column-InProgress']);
+
+    // In progress can move to Blocked, Done, or back to Todo.
+    expect(component.connectedDropListsFor(TaskState.InProgress)).toEqual([
+      'column-Todo',
+      'column-Blocked',
+      'column-Done'
+    ]);
+
+    // Done is terminal — no drop targets.
+    expect(component.connectedDropListsFor(TaskState.Done)).toEqual([]);
+  });
+
   it('filters tasks by search text (title or description)', async () => {
     const other: TaskDto = { ...task, id: 'task-2', title: 'Deploy to prod', description: 'infra' };
     const { component } = createComponent();

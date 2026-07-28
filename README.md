@@ -91,7 +91,7 @@ the test suite to back every one of them up.
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
 - **260 automated tests** — 119 backend unit, 29 backend integration (against a real,
-  disposable Postgres container via Testcontainers), 104 frontend, 8 end-to-end (Playwright,
+  disposable Postgres container via Testcontainers), 105 frontend, 7 end-to-end (Playwright,
   driving real browser contexts through the full owner/member workflow and drag & drop against
   the actual Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and
   a production build, on every push.
@@ -249,8 +249,8 @@ cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwrigh
 |---|---|---|
 | Backend unit | 119 | Domain rules (state machines, validation, color palette, password policy, avatar color), CQRS handlers against an EF Core InMemory context |
 | Backend integration | 29 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, account lockout, security headers, avatar color, board membership/roles, invitations, notifications, SignalR hub authorization |
-| Frontend | 104 | Services (HTTP contracts + toasts), components (behavior via mocked services, incl. avatars, filters, user menu), interceptors, guards |
-| End-to-end | 8 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, drag & drop between columns, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
+| Frontend | 105 | Services (HTTP contracts + toasts), components (behavior via mocked services, incl. avatars, filters, user menu), interceptors, guards |
+| End-to-end | 7 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, drag & drop between columns, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
 ## Project structure
 
