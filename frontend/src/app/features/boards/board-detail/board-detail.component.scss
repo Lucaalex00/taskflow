@@ -104,15 +104,84 @@
   color: var(--color-text-muted);
 }
 
+/* --- New-task modal --- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(6, 4, 12, 0.6);
+  cursor: default;
+  z-index: 50;
+  animation: modal-fade 0.15s ease;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  z-index: 51;
+  animation: modal-pop 0.18s ease;
+}
+
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop {
+  from { transform: translate(-50%, -50%) scale(0.97); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal__title {
+  font-size: 15px;
+  margin: 0;
+}
+
+.modal__close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.modal__close:hover {
+  color: var(--color-text);
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .task-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 18px;
-  margin-bottom: 20px;
+  padding: 18px 20px 20px;
 }
 
 .task-form__row {
@@ -263,6 +332,13 @@
   flex-direction: column;
   gap: 8px;
   cursor: grab;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--state-color);
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.6);
 }
 
 .task-card:active {

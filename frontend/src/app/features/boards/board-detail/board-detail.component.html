@@ -64,37 +64,49 @@
     }
 
     @if (isOwner() && isTaskFormOpen()) {
-      <form class="task-form" (ngSubmit)="createTask()">
-        <label class="field">
-          <span class="field__label">Title</span>
-          <input class="field__input" type="text" name="title" [(ngModel)]="newTaskTitle" required />
-        </label>
+      <button class="modal-backdrop" type="button" aria-label="Close" (click)="isTaskFormOpen.set(false)"></button>
 
-        <label class="field">
-          <span class="field__label">Description (optional)</span>
-          <textarea class="field__textarea" name="description" [(ngModel)]="newTaskDescription"></textarea>
-        </label>
-
-        <div class="task-form__row">
-          <label class="field">
-            <span class="field__label">Priority</span>
-            <select class="field__select" name="priority" [(ngModel)]="newTaskPriority">
-              @for (p of [TaskPriority.Low, TaskPriority.Medium, TaskPriority.High, TaskPriority.Critical]; track p) {
-                <option [value]="p">{{ p }}</option>
-              }
-            </select>
-          </label>
-
-          <label class="field">
-            <span class="field__label">Due date (optional)</span>
-            <input class="field__input" type="date" name="dueDate" [(ngModel)]="newTaskDueDate" />
-          </label>
+      <div class="modal" role="dialog" aria-label="New task">
+        <div class="modal__header">
+          <h2 class="modal__title mono">New task</h2>
+          <button class="modal__close" type="button" aria-label="Close" (click)="isTaskFormOpen.set(false)">&times;</button>
         </div>
 
-        <button class="btn btn--primary" type="submit" [disabled]="isCreatingTask()">
-          {{ isCreatingTask() ? 'Creating…' : 'Create task' }}
-        </button>
-      </form>
+        <form class="task-form" (ngSubmit)="createTask()">
+          <label class="field">
+            <span class="field__label">Title</span>
+            <input class="field__input" type="text" name="title" [(ngModel)]="newTaskTitle" placeholder="What needs doing?" required />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Description (optional)</span>
+            <textarea class="field__textarea" name="description" [(ngModel)]="newTaskDescription" placeholder="Add any details…"></textarea>
+          </label>
+
+          <div class="task-form__row">
+            <label class="field">
+              <span class="field__label">Priority</span>
+              <select class="field__select" name="priority" [(ngModel)]="newTaskPriority">
+                @for (p of [TaskPriority.Low, TaskPriority.Medium, TaskPriority.High, TaskPriority.Critical]; track p) {
+                  <option [value]="p">{{ p }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Due date (optional)</span>
+              <input class="field__input" type="date" name="dueDate" [(ngModel)]="newTaskDueDate" />
+            </label>
+          </div>
+
+          <div class="modal__actions">
+            <button class="btn btn--ghost" type="button" (click)="isTaskFormOpen.set(false)">Cancel</button>
+            <button class="btn btn--primary" type="submit" [disabled]="isCreatingTask()">
+              {{ isCreatingTask() ? 'Creating…' : 'Create task' }}
+            </button>
+          </div>
+        </form>
+      </div>
     }
 
     @if (errorMessage()) {
