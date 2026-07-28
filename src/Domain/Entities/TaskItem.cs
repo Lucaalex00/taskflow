@@ -17,6 +17,11 @@ public class TaskItem : Entity
     public DateTime UpdatedAtUtc { get; private set; }
     public DateTime? CompletedAtUtc { get; private set; }
 
+    /// <summary>Set when the task is logically deleted ("archived"): it stays in the database
+    /// for history but is hidden from the board unless archived tasks are explicitly shown.</summary>
+    public DateTime? ArchivedAtUtc { get; private set; }
+    public bool IsArchived => ArchivedAtUtc is not null;
+
     private TaskItem() { } // EF Core
 
     private TaskItem(Guid boardId, string title, string? description, TaskPriority priority, DateTime? dueAtUtc)
@@ -105,4 +110,20 @@ public class TaskItem : Entity
         DueAtUtc is not null
         && DueAtUtc < asOfUtc
         && State is not (TaskState.Done or TaskState.Cancelled);
+
+    /// <summary>Logical delete — keeps the row for history but hides it from the board.
+    /// Idempotent; only a completed (Done) task can be archived, since archiving is the
+    /// "close and file away" step at the end of a task's life.</summary>
+    public Result Archive(DateTime nowUtc)
+    {
+        if (IsArchived)
+            return Result.Success();
+
+        if (State != TaskState.Done)
+            return Result.Failure("Only a completed task can be archived.");
+
+        ArchivedAtUtc = nowUtc;
+        UpdatedAtUtc = nowUtc;
+        return Result.Success();
+    }
 }

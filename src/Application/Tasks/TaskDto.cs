@@ -12,5 +12,6 @@ public sealed record TaskDto(
     Guid? AssigneeId,
     DateTime? DueAtUtc,
     bool IsOverdue,
+    bool IsArchived,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc);

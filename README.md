@@ -81,8 +81,11 @@ the test suite to back every one of them up.
 - An explicit `TaskItem` state machine (`Todo → InProgress → {Blocked, Done, Cancelled}`)
   enforced in the domain layer, mirrored exactly by the UI's transition buttons.
 - A traffic-light color-coded Kanban board with **drag & drop** between columns (which still
-  respects the domain's valid transitions), a **search/filter** bar (title, assignee, priority),
-  and toast confirmations.
+  respects the domain's valid transitions), a **search + filter dropdown** (title, assignee,
+  priority, show-completed), and toast confirmations.
+- Closing a task (→ Done) asks for confirmation, then locks the card; a completed task can be
+  **archived** (a logical delete — hidden from the board but kept in the database, viewable via
+  "show completed").
 - **Avatars** (initial on a user-chosen color, changeable any time) for instant recognition of
   assignees and members; board colors for visual identification across the board list.
 
@@ -90,8 +93,8 @@ the test suite to back every one of them up.
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **260 automated tests** — 119 backend unit, 29 backend integration (against a real,
-  disposable Postgres container via Testcontainers), 105 frontend, 7 end-to-end (Playwright,
+- **284 automated tests** — 127 backend unit, 31 backend integration (against a real,
+  disposable Postgres container via Testcontainers), 114 frontend, 8 end-to-end (Playwright,
   driving real browser contexts through the full owner/member workflow and drag & drop against
   the actual Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and
   a production build, on every push.
@@ -247,10 +250,10 @@ cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwrigh
 
 | Suite | Count | What it covers |
 |---|---|---|
-| Backend unit | 119 | Domain rules (state machines, validation, color palette, password policy, avatar color), CQRS handlers against an EF Core InMemory context |
-| Backend integration | 29 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, account lockout, security headers, avatar color, board membership/roles, invitations, notifications, SignalR hub authorization |
-| Frontend | 105 | Services (HTTP contracts + toasts), components (behavior via mocked services, incl. avatars, filters, user menu), interceptors, guards |
-| End-to-end | 7 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, drag & drop between columns, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
+| Backend unit | 127 | Domain rules (state machines, validation, color palette, password policy, avatar color), CQRS handlers against an EF Core InMemory context |
+| Backend integration | 31 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, account lockout, security headers, avatar color, board membership/roles, invitations, notifications, SignalR hub authorization |
+| Frontend | 114 | Services (HTTP contracts + toasts), components (behavior via mocked services, incl. avatars, filters, user menu), interceptors, guards |
+| End-to-end | 8 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, drag & drop, the close→confirm→archive→show-completed flow, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
 ## Project structure
 

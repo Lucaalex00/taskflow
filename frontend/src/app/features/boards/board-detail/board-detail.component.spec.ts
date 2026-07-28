@@ -34,6 +34,7 @@ describe('BoardDetailComponent', () => {
     assigneeId: null,
     dueAtUtc: null,
     isOverdue: false,
+    isArchived: false,
     createdAtUtc: '2026-01-01T00:00:00Z',
     updatedAtUtc: '2026-01-01T00:00:00Z'
   };
@@ -61,7 +62,8 @@ describe('BoardDetailComponent', () => {
       'getBoardTasks',
       'create',
       'transitionState',
-      'assign'
+      'assign',
+      'archive'
     ]);
     boardService = jasmine.createSpyObj<BoardService>('BoardService', [
       'getAll',
@@ -116,7 +118,7 @@ describe('BoardDetailComponent', () => {
 
     await component.ngOnInit();
 
-    expect(taskService.getBoardTasks).toHaveBeenCalledWith('board-1');
+    expect(taskService.getBoardTasks).toHaveBeenCalledWith('board-1', false);
     expect(boardService.getMembers).toHaveBeenCalledWith('board-1');
     expect(alertService.connectToBoard).toHaveBeenCalledWith('board-1');
     expect(component.tasks()).toEqual([task]);
@@ -244,6 +246,70 @@ describe('BoardDetailComponent', () => {
 
     expect(taskService.transitionState).toHaveBeenCalledWith('task-1', TaskState.InProgress);
     expect(taskService.getBoardTasks).toHaveBeenCalled();
+  });
+
+  it('requestMove to Done asks for confirmation instead of moving immediately', async () => {
+    const { component } = createComponent();
+
+    await component.requestMove(task, TaskState.Done);
+
+    expect(component.pendingDoneTask()).toEqual(task);
+    expect(taskService.transitionState).not.toHaveBeenCalled();
+  });
+
+  it('requestMove to a non-Done state moves immediately (no confirmation)', async () => {
+    const { component } = createComponent();
+    taskService.transitionState.and.resolveTo(undefined);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.requestMove(task, TaskState.InProgress);
+
+    expect(component.pendingDoneTask()).toBeNull();
+    expect(taskService.transitionState).toHaveBeenCalledWith('task-1', TaskState.InProgress);
+  });
+
+  it('confirmMoveToDone moves the pending task to Done and clears the prompt', async () => {
+    const { component } = createComponent();
+    taskService.transitionState.and.resolveTo(undefined);
+    taskService.getBoardTasks.and.resolveTo([]);
+    await component.requestMove(task, TaskState.Done);
+
+    await component.confirmMoveToDone();
+
+    expect(taskService.transitionState).toHaveBeenCalledWith('task-1', TaskState.Done);
+    expect(component.pendingDoneTask()).toBeNull();
+  });
+
+  it('cancelMoveToDone clears the prompt without moving', async () => {
+    const { component } = createComponent();
+    await component.requestMove(task, TaskState.Done);
+
+    component.cancelMoveToDone();
+
+    expect(component.pendingDoneTask()).toBeNull();
+    expect(taskService.transitionState).not.toHaveBeenCalled();
+  });
+
+  it('archiveTask archives the task, reloads, and shows a success toast', async () => {
+    const { component } = createComponent();
+    taskService.archive.and.resolveTo(undefined);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.archiveTask({ ...task, state: TaskState.Done });
+
+    expect(taskService.archive).toHaveBeenCalledWith('task-1');
+    expect(taskService.getBoardTasks).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('toggleShowArchived flips the flag and refetches with includeArchived', async () => {
+    const { component } = createComponent();
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    await component.toggleShowArchived();
+
+    expect(component.showArchived()).toBeTrue();
+    expect(taskService.getBoardTasks).toHaveBeenCalledWith('board-1', true);
   });
 
   it('moveTask shows a success toast on success', async () => {

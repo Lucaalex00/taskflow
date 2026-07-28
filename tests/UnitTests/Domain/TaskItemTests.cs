@@ -96,6 +96,50 @@ public class TaskItemTests
         result.IsSuccess.Should().BeFalse();
     }
 
+    [Fact]
+    public void Archive_WhenTaskIsDone_MarksItArchived()
+    {
+        var task = CreateValidTask();
+        task.TransitionTo(TaskState.InProgress);
+        task.TransitionTo(TaskState.Done);
+
+        var result = task.Archive(DateTime.UtcNow);
+
+        result.IsSuccess.Should().BeTrue();
+        task.IsArchived.Should().BeTrue();
+        task.ArchivedAtUtc.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData(TaskState.Todo)]
+    [InlineData(TaskState.InProgress)]
+    [InlineData(TaskState.Blocked)]
+    public void Archive_WhenTaskIsNotDone_ReturnsFailure(TaskState state)
+    {
+        var task = CreateValidTask();
+        foreach (var s in PathTo(state)) task.TransitionTo(s);
+
+        var result = task.Archive(DateTime.UtcNow);
+
+        result.IsSuccess.Should().BeFalse();
+        task.IsArchived.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Archive_IsIdempotent()
+    {
+        var task = CreateValidTask();
+        task.TransitionTo(TaskState.InProgress);
+        task.TransitionTo(TaskState.Done);
+        task.Archive(DateTime.UtcNow);
+        var firstArchivedAt = task.ArchivedAtUtc;
+
+        var result = task.Archive(DateTime.UtcNow.AddHours(1));
+
+        result.IsSuccess.Should().BeTrue();
+        task.ArchivedAtUtc.Should().Be(firstArchivedAt); // unchanged on the second call
+    }
+
     /// <summary>Returns the sequence of transitions needed to reach the given state from Todo.</summary>
     private static IEnumerable<TaskState> PathTo(TaskState target) => target switch
     {

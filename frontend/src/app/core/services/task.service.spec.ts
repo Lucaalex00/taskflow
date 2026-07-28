@@ -19,6 +19,7 @@ describe('TaskService', () => {
     assigneeId: null,
     dueAtUtc: null,
     isOverdue: false,
+    isArchived: false,
     createdAtUtc: '2026-01-01T00:00:00Z',
     updatedAtUtc: '2026-01-01T00:00:00Z'
   };
@@ -35,11 +36,24 @@ describe('TaskService', () => {
     httpMock.verify();
   });
 
-  it('getBoardTasks requests tasks for the given board', async () => {
+  it('getBoardTasks requests tasks for the given board (excluding archived by default)', async () => {
     const promise = service.getBoardTasks('board-1');
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/boards/board-1/tasks`);
+    const req = httpMock.expectOne(
+      (r) => r.url === `${environment.apiUrl}/boards/board-1/tasks` && r.params.get('includeArchived') === 'false'
+    );
     expect(req.request.method).toBe('GET');
+    req.flush([task]);
+
+    expect(await promise).toEqual([task]);
+  });
+
+  it('getBoardTasks can include archived tasks', async () => {
+    const promise = service.getBoardTasks('board-1', true);
+
+    const req = httpMock.expectOne(
+      (r) => r.url === `${environment.apiUrl}/boards/board-1/tasks` && r.params.get('includeArchived') === 'true'
+    );
     req.flush([task]);
 
     expect(await promise).toEqual([task]);

@@ -15,6 +15,7 @@ public sealed class GetBoardTasksQueryHandler(ITaskFlowDbContext context, IDateT
         var tasks = await context.Tasks
             .AsNoTracking()
             .Where(t => t.BoardId == request.BoardId)
+            .Where(t => request.IncludeArchived || t.ArchivedAtUtc == null)
             .OrderByDescending(t => t.Priority)
             .ThenBy(t => t.DueAtUtc)
             .ToListAsync(cancellationToken);
@@ -23,7 +24,7 @@ public sealed class GetBoardTasksQueryHandler(ITaskFlowDbContext context, IDateT
 
         return tasks.Select(t => new TaskDto(
             t.Id, t.BoardId, t.Title, t.Description, t.State, t.Priority,
-            t.AssigneeId, t.DueAtUtc, t.IsOverdue(now), t.CreatedAtUtc, t.UpdatedAtUtc)
+            t.AssigneeId, t.DueAtUtc, t.IsOverdue(now), t.IsArchived, t.CreatedAtUtc, t.UpdatedAtUtc)
         ).ToList();
     }
 }

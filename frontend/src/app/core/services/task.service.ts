@@ -10,8 +10,12 @@ export class TaskService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getBoardTasks(boardId: string): Promise<TaskDto[]> {
-    return firstValueFrom(this.http.get<TaskDto[]>(`${this.baseUrl}/boards/${boardId}/tasks`));
+  getBoardTasks(boardId: string, includeArchived = false): Promise<TaskDto[]> {
+    return firstValueFrom(
+      this.http.get<TaskDto[]>(`${this.baseUrl}/boards/${boardId}/tasks`, {
+        params: { includeArchived: String(includeArchived) }
+      })
+    );
   }
 
   create(boardId: string, request: CreateTaskRequest): Promise<string> {
@@ -28,5 +32,9 @@ export class TaskService {
     return firstValueFrom(
       this.http.patch<void>(`${this.baseUrl}/tasks/${taskId}/assignee`, { userId })
     );
+  }
+
+  archive(taskId: string): Promise<void> {
+    return firstValueFrom(this.http.patch<void>(`${this.baseUrl}/tasks/${taskId}/archive`, {}));
   }
 }

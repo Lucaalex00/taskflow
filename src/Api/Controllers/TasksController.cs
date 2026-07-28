@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Tasks;
+using TaskFlow.Application.Tasks.Commands.ArchiveTask;
 using TaskFlow.Application.Tasks.Commands.AssignTask;
 using TaskFlow.Application.Tasks.Commands.CreateTask;
 using TaskFlow.Application.Tasks.Commands.TransitionTaskState;
@@ -15,12 +16,14 @@ namespace TaskFlow.Api.Controllers;
 [Authorize]
 public sealed class TasksController(ISender sender) : ControllerBase
 {
-    /// <summary>Lists every task on a board, sorted by priority then due date.</summary>
+    /// <summary>Lists a board's tasks, sorted by priority then due date. Archived tasks are
+    /// excluded unless <paramref name="includeArchived"/> is true.</summary>
     [HttpGet("boards/{boardId:guid}/tasks")]
     [ProducesResponseType(typeof(IReadOnlyList<TaskDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetBoardTasks(Guid boardId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetBoardTasks(
+        Guid boardId, CancellationToken cancellationToken, [FromQuery] bool includeArchived = false)
     {
-        var tasks = await sender.Send(new GetBoardTasksQuery(boardId), cancellationToken);
+        var tasks = await sender.Send(new GetBoardTasksQuery(boardId, includeArchived), cancellationToken);
         return Ok(tasks);
     }
 
@@ -60,6 +63,19 @@ public sealed class TasksController(ISender sender) : ControllerBase
         Guid taskId, AssignTaskRequest request, CancellationToken cancellationToken)
     {
         await sender.Send(new AssignTaskCommand(taskId, request.UserId), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Archives (logically deletes) a completed task — hidden from the board but kept
+    /// in the database. Owner-only.</summary>
+    [HttpPatch("tasks/{taskId:guid}/archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Archive(Guid taskId, CancellationToken cancellationToken)
+    {
+        await sender.Send(new ArchiveTaskCommand(taskId), cancellationToken);
         return NoContent();
     }
 }

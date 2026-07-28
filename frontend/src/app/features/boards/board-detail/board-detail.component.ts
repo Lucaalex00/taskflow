@@ -60,6 +60,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   readonly columns: TaskState[] = [...BOARD_COLUMNS];
   readonly columnLabels = COLUMN_LABELS;
   readonly TaskPriority = TaskPriority;
+  readonly TaskState = TaskState;
   readonly AlertSeverity = AlertSeverity;
   readonly BoardRole = BoardRole;
 
@@ -72,14 +73,35 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   readonly isMembersOpen = signal(false);
 
   // Board filters. searchText matches title/description; assigneeFilter is a userId,
-  // 'unassigned', or '' (all); priorityFilter is a TaskPriority or 'all'.
+  // 'unassigned', or '' (all); priorityFilter is a TaskPriority or 'all'. isFilterPanelOpen
+  // controls the dropdown revealed by the filter icon; showArchived includes logically-deleted
+  // (archived) tasks in the fetch.
   readonly searchText = signal('');
   readonly assigneeFilter = signal<string>('');
   readonly priorityFilter = signal<TaskPriority | 'all'>('all');
+  readonly isFilterPanelOpen = signal(false);
+  readonly showArchived = signal(false);
+
+  // Set to the task awaiting "are you sure you want to close this?" confirmation before it
+  // moves to Done. Null when no confirmation is pending.
+  readonly pendingDoneTask = signal<TaskDto | null>(null);
 
   readonly hasActiveFilters = computed(
-    () => this.searchText().trim() !== '' || this.assigneeFilter() !== '' || this.priorityFilter() !== 'all'
+    () =>
+      this.searchText().trim() !== '' ||
+      this.assigneeFilter() !== '' ||
+      this.priorityFilter() !== 'all' ||
+      this.showArchived()
   );
+
+  /** Count of active filters, shown as a badge on the filter button. */
+  readonly activeFilterCount = computed(() => {
+    let n = 0;
+    if (this.assigneeFilter() !== '') n++;
+    if (this.priorityFilter() !== 'all') n++;
+    if (this.showArchived()) n++;
+    return n;
+  });
 
   private readonly filteredTasks = computed(() => {
     const query = this.searchText().trim().toLowerCase();
@@ -159,6 +181,21 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     this.searchText.set('');
     this.assigneeFilter.set('');
     this.priorityFilter.set('all');
+    if (this.showArchived()) {
+      this.showArchived.set(false);
+      void this.loadTasks();
+    }
+  }
+
+  toggleFilterPanel(): void {
+    this.isFilterPanelOpen.update((open) => !open);
+  }
+
+  /** The "show completed/archived" toggle re-fetches with includeArchived so archived tasks
+   * (which the default fetch omits) appear on the board. */
+  async toggleShowArchived(): Promise<void> {
+    this.showArchived.update((v) => !v);
+    await this.loadTasks();
   }
 
   transitionsFor(task: TaskDto): TaskState[] {
@@ -183,7 +220,30 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
       return;
     }
 
-    await this.moveTask(task, target);
+    await this.requestMove(task, target);
+  }
+
+  /** Entry point for every move (button or drag). Moving to Done is a "close" — it asks for
+   * confirmation first; every other transition happens immediately. */
+  async requestMove(task: TaskDto, newState: TaskState): Promise<void> {
+    if (newState === TaskState.Done) {
+      // The card hasn't actually moved (the view is driven by the tasks signal, not CDK's
+      // optimistic DOM move), so just open the confirmation — no revert needed on cancel.
+      this.pendingDoneTask.set(task);
+      return;
+    }
+
+    await this.moveTask(task, newState);
+  }
+
+  async confirmMoveToDone(): Promise<void> {
+    const task = this.pendingDoneTask();
+    this.pendingDoneTask.set(null);
+    if (task) await this.moveTask(task, TaskState.Done);
+  }
+
+  cancelMoveToDone(): void {
+    this.pendingDoneTask.set(null);
   }
 
   async moveTask(task: TaskDto, newState: TaskState): Promise<void> {
@@ -193,6 +253,17 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
       this.toast.success(`Moved "${task.title}" to ${COLUMN_LABELS[newState]}.`);
     } catch {
       this.toast.error(`Could not move "${task.title}" to ${COLUMN_LABELS[newState]}.`);
+    }
+  }
+
+  /** Logical delete — hides the (Done) task from the board while keeping it in the database. */
+  async archiveTask(task: TaskDto): Promise<void> {
+    try {
+      await this.taskService.archive(task.id);
+      await this.loadTasks();
+      this.toast.success(`"${task.title}" archived — visible under "show completed".`);
+    } catch {
+      this.toast.error(`Could not archive "${task.title}".`);
     }
   }
 
@@ -318,7 +389,7 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
   private async loadTasks(): Promise<void> {
     this.isLoading.set(true);
     try {
-      this.tasks.set(await this.taskService.getBoardTasks(this.boardId));
+      this.tasks.set(await this.taskService.getBoardTasks(this.boardId, this.showArchived()));
     } catch {
       this.errorMessage.set('Could not load tasks for this board.');
     } finally {

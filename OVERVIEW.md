@@ -302,3 +302,9 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-24-account-lockout.md`](docs/2026-07-24-account-lockout.md) — temporary per-account lockout after repeated failed logins, complementing the per-IP rate limiter
 - [`docs/2026-07-24-theme-and-notification-drawer.md`](docs/2026-07-24-theme-and-notification-drawer.md) — a fixed violet/pink dark theme and a redesigned, type-color-coded notification side drawer
 - [`docs/2026-07-27-state-color-coded-kanban.md`](docs/2026-07-27-state-color-coded-kanban.md) — traffic-light color coding for the Kanban columns and task cards (grey/amber/red/green by state)
+- [`docs/2026-07-27-avatars-and-user-menu.md`](docs/2026-07-27-avatars-and-user-menu.md) — initial-based avatars with a user-chosen editable color, and a header user menu
+- [`docs/2026-07-27-drag-and-drop.md`](docs/2026-07-27-drag-and-drop.md) — drag & drop tasks between columns (CDK), respecting valid transitions
+- [`docs/2026-07-27-board-search-and-filters.md`](docs/2026-07-27-board-search-and-filters.md) — client-side board search and filters
+- [`docs/2026-07-27-toasts-and-empty-states.md`](docs/2026-07-27-toasts-and-empty-states.md) — toast confirmations and clearer empty states
+- [`docs/2026-07-27-new-task-modal-and-hover-polish.md`](docs/2026-07-27-new-task-modal-and-hover-polish.md) — new-task modal and hover polish
+- [`docs/2026-07-28-close-confirm-archive-and-filter-dropdown.md`](docs/2026-07-28-close-confirm-archive-and-filter-dropdown.md) — close-confirmation, locked Done cards, logical delete (archive) + show-completed, and the filter dropdown

@@ -132,42 +132,74 @@
             placeholder="Search tasks…"
             aria-label="Search tasks"
           />
+          <button
+            class="board-filters__toggle"
+            type="button"
+            (click)="toggleFilterPanel()"
+            [class.board-filters__toggle--active]="isFilterPanelOpen() || activeFilterCount() > 0"
+            [attr.aria-expanded]="isFilterPanelOpen()"
+            aria-label="Filters"
+            title="Filters"
+          >
+            <span aria-hidden="true">&#9776;</span> Filter
+            @if (activeFilterCount() > 0) {
+              <span class="board-filters__badge mono">{{ activeFilterCount() }}</span>
+            }
+          </button>
         </div>
 
-        <select
-          class="field__select"
-          name="assigneeFilter"
-          [ngModel]="assigneeFilter()"
-          (ngModelChange)="assigneeFilter.set($event)"
-          aria-label="Filter by assignee"
-        >
-          <option value="">All assignees</option>
-          <option value="unassigned">Unassigned</option>
-          @for (m of members(); track m.userId) {
-            <option [value]="m.userId">{{ m.displayName }}</option>
-          }
-        </select>
-
-        <select
-          class="field__select"
-          name="priorityFilter"
-          [ngModel]="priorityFilter()"
-          (ngModelChange)="priorityFilter.set($event)"
-          aria-label="Filter by priority"
-        >
-          <option value="all">All priorities</option>
-          @for (p of [TaskPriority.Low, TaskPriority.Medium, TaskPriority.High, TaskPriority.Critical]; track p) {
-            <option [value]="p">{{ p }}</option>
-          }
-        </select>
-
         @if (hasActiveFilters()) {
-          <button class="btn btn--ghost board-filters__clear" type="button" (click)="clearFilters()">
-            Clear filters
-          </button>
           <span class="board-filters__count mono muted">{{ visibleTaskCount() }} shown</span>
         }
       </div>
+
+      @if (isFilterPanelOpen()) {
+        <button class="filter-panel-backdrop" type="button" aria-label="Close filters" (click)="isFilterPanelOpen.set(false)"></button>
+        <div class="filter-panel" role="dialog" aria-label="Filters">
+          <label class="field filter-panel__field">
+            <span class="field__label">Assignee</span>
+            <select
+              class="field__select"
+              name="assigneeFilter"
+              [ngModel]="assigneeFilter()"
+              (ngModelChange)="assigneeFilter.set($event)"
+            >
+              <option value="">All assignees</option>
+              <option value="unassigned">Unassigned</option>
+              @for (m of members(); track m.userId) {
+                <option [value]="m.userId">{{ m.displayName }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field filter-panel__field">
+            <span class="field__label">Priority</span>
+            <select
+              class="field__select"
+              name="priorityFilter"
+              [ngModel]="priorityFilter()"
+              (ngModelChange)="priorityFilter.set($event)"
+            >
+              <option value="all">All priorities</option>
+              @for (p of [TaskPriority.Low, TaskPriority.Medium, TaskPriority.High, TaskPriority.Critical]; track p) {
+                <option [value]="p">{{ p }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="filter-panel__check">
+            <input type="checkbox" [checked]="showArchived()" (change)="toggleShowArchived()" />
+            <span>Show completed (archived) tasks</span>
+          </label>
+
+          <div class="filter-panel__actions">
+            <button class="btn btn--ghost" type="button" [disabled]="!hasActiveFilters()" (click)="clearFilters()">
+              Clear
+            </button>
+            <button class="btn btn--primary" type="button" (click)="isFilterPanelOpen.set(false)">Done</button>
+          </div>
+        </div>
+      }
 
       <div class="kanban__columns">
         @for (column of columns; track column) {
@@ -193,15 +225,32 @@
                   class="task-card"
                   cdkDrag
                   [cdkDragData]="task"
+                  [cdkDragDisabled]="task.state === TaskState.Done || task.isArchived"
                   [attr.data-state]="task.state"
                   [class.task-card--overdue]="task.isOverdue"
+                  [class.task-card--locked]="task.state === TaskState.Done"
+                  [class.task-card--archived]="task.isArchived"
                 >
                   <div class="task-card__drag-preview" *cdkDragPreview [attr.data-state]="task.state">
                     {{ task.title }}
                   </div>
+
+                  <!-- Owner-only logical delete on a completed (non-archived) task. -->
+                  @if (isOwner() && task.state === TaskState.Done && !task.isArchived) {
+                    <button
+                      class="task-card__archive"
+                      type="button"
+                      title="Remove this task (kept in history)"
+                      aria-label="Archive task"
+                      (click)="archiveTask(task)"
+                    >&times;</button>
+                  }
+
                   <div class="task-card__top">
                     <span class="priority-tag" [attr.data-priority]="task.priority">{{ task.priority }}</span>
-                    @if (task.isOverdue) {
+                    @if (task.isArchived) {
+                      <span class="archived-tag mono">archived</span>
+                    } @else if (task.isOverdue) {
                       <span class="overdue-tag mono">overdue</span>
                     }
                   </div>
@@ -226,7 +275,7 @@
                       }
                     </span>
 
-                    @if (isOwner()) {
+                    @if (isOwner() && !task.isArchived && task.state !== TaskState.Done) {
                       <select
                         class="field__select"
                         [ngModel]="task.assigneeId ?? ''"
@@ -240,17 +289,19 @@
                     }
                   </div>
 
-                  <div class="task-card__actions">
-                    @if (isOwner() && !task.assigneeId) {
-                      <button class="btn btn--ghost" (click)="assignToSelf(task)">Assign to me</button>
-                    }
+                  @if (!task.isArchived) {
+                    <div class="task-card__actions">
+                      @if (isOwner() && !task.assigneeId && task.state !== TaskState.Done) {
+                        <button class="btn btn--ghost" (click)="assignToSelf(task)">Assign to me</button>
+                      }
 
-                    @for (nextState of transitionsFor(task); track nextState) {
-                      <button class="btn btn--ghost transition-btn" [attr.data-state]="nextState" (click)="moveTask(task, nextState)">
-                        &rarr; {{ columnLabels[nextState] }}
-                      </button>
-                    }
-                  </div>
+                      @for (nextState of transitionsFor(task); track nextState) {
+                        <button class="btn btn--ghost transition-btn" [attr.data-state]="nextState" (click)="requestMove(task, nextState)">
+                          &rarr; {{ columnLabels[nextState] }}
+                        </button>
+                      }
+                    </div>
+                  }
                 </div>
               } @empty {
                 <p class="column__empty mono muted">
@@ -304,3 +355,22 @@
     }
   </aside>
 </div>
+
+@if (pendingDoneTask(); as doneTask) {
+  <button class="modal-backdrop" type="button" aria-label="Cancel" (click)="cancelMoveToDone()"></button>
+
+  <div class="modal modal--sm" role="dialog" aria-label="Confirm close task">
+    <div class="modal__header">
+      <h2 class="modal__title mono">Close this task?</h2>
+    </div>
+    <div class="confirm-body">
+      <p>Are you sure you want to close <strong>“{{ doneTask.title }}”</strong>?</p>
+      <p class="muted">It moves to <strong>Done</strong> and gets locked. You can remove it afterwards
+        with the × on the card (it stays in history).</p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" type="button" (click)="cancelMoveToDone()">Cancel</button>
+        <button class="btn btn--primary" type="button" (click)="confirmMoveToDone()">Yes, close it</button>
+      </div>
+    </div>
+  </div>
+}

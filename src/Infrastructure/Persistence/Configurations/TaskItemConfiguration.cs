@@ -11,6 +11,7 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
         builder.ToTable("tasks");
         builder.HasKey(t => t.Id);
         builder.Ignore(t => t.DomainEvents);
+        builder.Ignore(t => t.IsArchived); // computed from ArchivedAtUtc, not a stored column
 
         builder.Property(t => t.Title).HasMaxLength(200).IsRequired();
         builder.Property(t => t.Description).HasMaxLength(2000);

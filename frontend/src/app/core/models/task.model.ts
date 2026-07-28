@@ -23,6 +23,7 @@ export interface TaskDto {
   assigneeId: string | null;
   dueAtUtc: string | null;
   isOverdue: boolean;
+  isArchived: boolean;
   createdAtUtc: string;
   updatedAtUtc: string;
 }
