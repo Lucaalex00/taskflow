@@ -95,9 +95,13 @@
 
             <label class="field">
               <span class="field__label">Due date (optional)</span>
-              <input class="field__input" type="date" name="dueDate" [(ngModel)]="newTaskDueDate" />
+              <input class="field__input" type="date" name="dueDate" [min]="minDueDate" [(ngModel)]="newTaskDueDate" />
             </label>
           </div>
+
+          @if (errorMessage()) {
+            <p class="form-error">{{ errorMessage() }}</p>
+          }
 
           <div class="modal__actions">
             <button class="btn btn--ghost" type="button" (click)="isTaskFormOpen.set(false)">Cancel</button>

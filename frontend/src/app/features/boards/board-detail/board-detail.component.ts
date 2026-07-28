@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TaskService } from '../../../core/services/task.service';
@@ -36,6 +37,16 @@ const COLUMN_LABELS: Record<TaskState, string> = {
   [TaskState.Done]: 'Done',
   [TaskState.Cancelled]: 'Cancelled'
 };
+
+/** Pulls the first human-readable validation message out of an API error's RFC 7807
+ * ProblemDetails body (the `errors` map the ValidationBehavior fills, falling back to
+ * `detail`), so the UI can show exactly what the server rejected. */
+function validationMessageFrom(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 400) return null;
+  const body = error.error as { errors?: Record<string, string[]>; detail?: string } | null;
+  const firstError = body?.errors ? Object.values(body.errors)[0]?.[0] : undefined;
+  return firstError ?? body?.detail ?? null;
+}
 
 @Component({
   selector: 'app-board-detail',
@@ -215,8 +226,19 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     return this.members().find((m) => m.userId === task.assigneeId)?.color ?? null;
   }
 
+  /** Today's date as yyyy-MM-dd, for the due-date input's `min` (blocks past dates in the picker). */
+  get minDueDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
   async createTask(): Promise<void> {
     if (!this.newTaskTitle.trim()) return;
+
+    // Catch a past due date before hitting the server, with a message pointing at the field.
+    if (this.newTaskDueDate && this.newTaskDueDate < this.minDueDate) {
+      this.errorMessage.set('Due date cannot be in the past — pick today or a later date.');
+      return;
+    }
 
     this.isCreatingTask.set(true);
     this.errorMessage.set(null);
@@ -238,8 +260,12 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
 
       await this.loadTasks();
       this.toast.success(`Task "${createdTitle}" created.`);
-    } catch {
-      this.errorMessage.set('Could not create the task. Check the title and due date.');
+    } catch (error) {
+      // Prefer the server's specific validation message (e.g. "Due date cannot be in the
+      // past.") over a generic one, so the user knows exactly what to fix.
+      this.errorMessage.set(
+        validationMessageFrom(error) ?? 'Could not create the task. Check the title and due date.'
+      );
     } finally {
       this.isCreatingTask.set(false);
     }

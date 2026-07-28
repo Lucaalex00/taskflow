@@ -1,4 +1,5 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { signal } from '@angular/core';
 import { BoardDetailComponent } from './board-detail.component';
@@ -351,6 +352,32 @@ describe('BoardDetailComponent', () => {
     await component.createTask();
 
     expect(taskService.create).not.toHaveBeenCalled();
+  });
+
+  it('createTask rejects a due date in the past with a clear message, without calling the API', async () => {
+    const { component } = createComponent();
+    component.newTaskTitle = 'Ship it';
+    component.newTaskDueDate = '2000-01-01'; // firmly in the past
+
+    await component.createTask();
+
+    expect(taskService.create).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('past');
+  });
+
+  it('createTask surfaces the server validation message on a 400', async () => {
+    const { component } = createComponent();
+    taskService.create.and.rejectWith(
+      new HttpErrorResponse({
+        status: 400,
+        error: { errors: { DueAtUtc: ['Due date cannot be in the past.'] } }
+      })
+    );
+    component.newTaskTitle = 'Ship it';
+
+    await component.createTask();
+
+    expect(component.errorMessage()).toBe('Due date cannot be in the past.');
   });
 
   it('markAlertRead marks the alert read remotely and updates the local signal', async () => {

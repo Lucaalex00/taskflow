@@ -138,6 +138,11 @@ using (var scope = app.Services.CreateScope())
 }
 
 // --- Middleware pipeline ---------------------------------------------------
+// Serilog request logging is outermost so it records the FINAL response status. If it sat
+// inside ExceptionHandlingMiddleware, an expected exception (e.g. a 400 validation failure)
+// would still be propagating when Serilog logged it, so it would be recorded as a 500 even
+// though the client correctly receives a 400.
+app.UseSerilogRequestLogging();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
@@ -147,7 +152,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseSerilogRequestLogging();
 app.UseCors(AngularDevCorsPolicy);
 app.UseHttpsRedirection();
 app.UseAuthentication();
