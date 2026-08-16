@@ -59,6 +59,22 @@ public class User : Entity
             DisplayName = newDisplayName.Trim();
     }
 
+    /// <summary>Replaces the stored credential with an already-hashed new one. Verifying the
+    /// *current* password before calling this is the caller's job — the domain never sees
+    /// plaintext, so it can't do that check itself.</summary>
+    public Result ChangePasswordHash(string newPasswordHash)
+    {
+        if (string.IsNullOrWhiteSpace(newPasswordHash))
+            return Result.Failure("A password is required.");
+
+        PasswordHash = newPasswordHash;
+
+        // A password change ends any active lockout: whoever did it proved they knew the old
+        // password, so the failed-attempt history is no longer evidence of an attack in progress.
+        RegisterSuccessfulLogin();
+        return Result.Success();
+    }
+
     /// <summary>Changes the user's avatar color. Returns a failure result (rather than throwing)
     /// for an invalid hex, so the caller can surface it as a validation error.</summary>
     public Result SetColor(string hexColor)

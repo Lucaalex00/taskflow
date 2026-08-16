@@ -1,0 +1,144 @@
+.profile {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile__back {
+  font-size: 12px;
+  text-decoration: none;
+  align-self: flex-start;
+}
+
+.profile__back:hover {
+  color: var(--color-accent);
+}
+
+.profile__title {
+  font-size: 20px;
+  margin: 0;
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel__title {
+  font-size: 14px;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.panel__hint {
+  margin: -10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.profile__identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile__identity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile__identity-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+
+.profile__color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.profile__color-input {
+  width: 30px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.profile__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.profile__form .btn {
+  align-self: flex-start;
+}
+
+.password-checklist {
+  list-style: none;
+  margin: -4px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+}
+
+.password-checklist__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  transition: color 0.15s ease;
+}
+
+.password-checklist__item--met {
+  color: var(--color-accent);
+}
+
+.password-checklist__mark {
+  display: inline-flex;
+  width: 14px;
+  justify-content: center;
+  font-family: var(--font-display);
+}
+
+.theme-choice {
+  display: flex;
+  gap: 8px;
+}
+
+.theme-choice__option {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  font-size: 13px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-choice__option:hover {
+  border-color: var(--color-accent);
+}
+
+.theme-choice__option--active {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}

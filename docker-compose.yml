@@ -1,26 +1,32 @@
+# Every value below is overridable from a .env file next to this one (copy .env.example),
+# or from the environment. The `${VAR:-default}` defaults mean `docker compose up --build`
+# still works with no .env at all — the demo stays one command, but nothing is hardcoded.
 services:
   postgres:
     image: postgres:16-alpine
     container_name: taskflow-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: taskflow
-      POSTGRES_USER: taskflow
-      POSTGRES_PASSWORD: taskflow
+      POSTGRES_DB: ${POSTGRES_DB:-taskflow}
+      POSTGRES_USER: ${POSTGRES_USER:-taskflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-taskflow}
+    # Published only so you can inspect the database with your own client. If port 5432 is
+    # already taken by a local Postgres, set POSTGRES_PORT to something else in .env —
+    # nothing inside the stack depends on the host port.
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U taskflow -d taskflow"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-taskflow} -d ${POSTGRES_DB:-taskflow}"]
       interval: 5s
       timeout: 5s
       retries: 10
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 512M
+          cpus: "${POSTGRES_CPUS:-1.0}"
+          memory: ${POSTGRES_MEMORY:-512M}
 
   api:
     build:
@@ -32,15 +38,29 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=taskflow;Username=taskflow;Password=taskflow"
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-taskflow};Username=${POSTGRES_USER:-taskflow};Password=${POSTGRES_PASSWORD:-taskflow}"
+      # Signing key for issued JWTs. The default is a well-known demo value and the API
+      # refuses to start with it when ASPNETCORE_ENVIRONMENT=Production — set JWT_SECRET
+      # (32+ chars) in .env before deploying anywhere real.
+      Jwt__Secret: ${JWT_SECRET:-dev-only-secret-change-me-in-any-real-deployment-32chars+}
+      Jwt__ExpiryMinutes: ${JWT_EXPIRY_MINUTES:-1440}
+      # How often the workload monitor snapshots every board and evaluates alert rules.
+      # Lower it (e.g. 10) to watch anomaly alerts fire while you're exploring.
+      LoadMonitor__IntervalSeconds: ${LOAD_MONITOR_INTERVAL_SECONDS:-20}
+      RateLimiting__Auth__PermitLimit: ${AUTH_RATE_LIMIT_PERMITS:-10}
+      RateLimiting__Auth__WindowSeconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:-60}
+      # Seeds a ready-to-explore demo workspace (two users, a populated board, and task load
+      # that trips a real anomaly alert) on an empty database. Set to false for a blank start.
+      Seed__Enabled: ${SEED_DEMO:-true}
+      Seed__Password: ${SEED_PASSWORD:-Demo-password-2026}
     ports:
-      - "5080:8080"
+      - "${API_PORT:-5080}:8080"
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 512M
+          cpus: "${API_CPUS:-1.0}"
+          memory: ${API_MEMORY:-512M}
 
   frontend:
     build:
@@ -48,15 +68,18 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: taskflow-frontend
     restart: unless-stopped
+    # Waits for the API's own container healthcheck (see Dockerfile.api) rather than just for
+    # the container to exist, so nginx never proxies to a backend that's still migrating.
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - "4200:8080"
+      - "${WEB_PORT:-4200}:8080"
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "${WEB_CPUS:-0.5}"
+          memory: ${WEB_MEMORY:-128M}
 
 volumes:
   postgres-data:

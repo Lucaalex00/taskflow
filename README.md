@@ -12,7 +12,8 @@ member is overloaded, a board's active-task count spikes, or someone is juggling
 tasks at once — plus real authentication, board-scoped roles, an invitation/notification
 system, and per-board access control. Not a CRUD demo.
 
-**Try it in under two minutes:** `docker compose up --build` — see [Quick start](#quick-start).
+**Try it in under two minutes:** `docker compose up --build`, then click *Explore the demo
+workspace* on the login screen — see [Quick start](#quick-start).
 
 ---
 
@@ -21,6 +22,8 @@ system, and per-board access control. Not a CRUD demo.
 - [Why this project exists](#why-this-project-exists)
 - [Key features](#key-features)
 - [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Screenshots](#screenshots)
 - [Try the full workflow](#try-the-full-workflow)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
@@ -89,12 +92,22 @@ the test suite to back every one of them up.
 - **Avatars** (initial on a user-chosen color, changeable any time) for instant recognition of
   assignees and members; board colors for visual identification across the board list.
 
+**Make it yours**
+- A light theme alongside the dark "workload console" default, toggled from the header and
+  remembered per browser — the whole UI is driven by design tokens, so it's one attribute on
+  `<html>`, not a second stylesheet.
+- A profile page to change your display name, your avatar colour, and your password (the
+  current one is required, and the new one goes through the same policy as registration).
+- Everything about the instance itself — ports, database credentials, JWT signing key and
+  lifetime, rate limits, monitor interval, whether to seed demo data — is an environment
+  variable with a working default. See [Configuration](#configuration).
+
 **Engineering quality**
 - Clean Architecture (Domain → Application → Infrastructure → Api), CQRS via MediatR,
   FluentValidation pipeline behavior, domain events dispatched through a real (not
   theoretical) MediatR-based mechanism.
-- **284 automated tests** — 127 backend unit, 31 backend integration (against a real,
-  disposable Postgres container via Testcontainers), 114 frontend, 8 end-to-end (Playwright,
+- **360 automated tests** — 166 backend unit, 49 backend integration (against a real,
+  disposable Postgres container via Testcontainers), 137 frontend, 8 end-to-end (Playwright,
   driving real browser contexts through the full owner/member workflow and drag & drop against
   the actual Docker stack) — plus a GitHub Actions pipeline that runs all of them, plus lint and
   a production build, on every push.
@@ -109,8 +122,9 @@ cd taskflow
 docker compose up --build
 ```
 
-That's the whole setup — EF Core migrations apply automatically on API startup, so there's no
-manual database step. First build takes about a minute; subsequent starts are seconds.
+That's the whole setup — EF Core migrations apply automatically on API startup, and an empty
+database gets seeded with a demo workspace, so there's no manual database step and nothing to
+fill in before the app is worth looking at.
 
 | What | URL |
 |---|---|
@@ -118,17 +132,66 @@ manual database step. First build takes about a minute; subsequent starts are se
 | API + Swagger | http://localhost:5080/swagger |
 | Health check | http://localhost:5080/health |
 
+**Sign in with one click.** The login screen offers *Explore the demo workspace* — two
+populated boards, three users with different roles, a pending invitation in the notification
+bell, and enough overdue/in-progress load that the anomaly detector raises a real alert within
+its first cycle. The credentials behind that button are `demo@taskflow.dev` /
+`Demo-password-2026` (the teammates are `sam@` and `priya@taskflow.dev`, same password), so you
+can open a second browser and watch both sides of the invite/assign flow at once.
+
+**In a hurry?** Skip the build entirely and pull the images CI already published:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+```
+
 ```bash
 docker compose logs api -f     # tail API logs (Serilog output)
 docker compose down            # stop (keeps the Postgres volume)
-docker compose down -v         # stop and wipe all data
+docker compose down -v         # stop and wipe all data (the next start re-seeds the demo)
 ```
+
+There's a `Makefile` wrapping all of the above — `make up`, `make demo`, `make reset`,
+`make test`, `make test-e2e` — run `make` on its own for the list.
+
+## Configuration
+
+Nothing needs configuring to run the demo, and nothing is hardcoded either: every knob is an
+environment variable with a sensible default. Copy `.env.example` to `.env` (or run `make env`)
+and change what you like — Docker Compose picks it up automatically.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `WEB_PORT` / `API_PORT` / `POSTGRES_PORT` | `4200` / `5080` / `5432` | Host ports. Change `POSTGRES_PORT` if you already run a local Postgres. |
+| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `taskflow` | Database name and credentials. |
+| `JWT_SECRET` | built-in demo key | Token signing key. The API **refuses to start** with the default when `ASPNETCORE_ENVIRONMENT=Production`. |
+| `JWT_EXPIRY_MINUTES` | `1440` | How long an issued token stays valid. |
+| `AUTH_RATE_LIMIT_PERMITS` / `..._WINDOW_SECONDS` | `10` / `60` | Per-IP throttle on login and registration. |
+| `SEED_DEMO` | `true` | Seeds the demo workspace on an empty database. Set to `false` for a blank instance — the login screen then drops the demo button. |
+| `SEED_PASSWORD` | `Demo-password-2026` | Password shared by the seeded accounts. |
+| `LOAD_MONITOR_INTERVAL_SECONDS` | `20` | How often the workload monitor snapshots boards and evaluates alert rules. Lower it to watch alerts fire sooner. |
+| `ASPNETCORE_ENVIRONMENT` | `Development` | `Development` exposes Swagger and debug logs; `Production` turns both down and enforces the JWT-secret check. |
+| `*_CPUS` / `*_MEMORY` | see `.env.example` | Per-container resource caps. |
+
+## Screenshots
+
+Every image below is generated by driving the real app with Playwright against the Docker
+stack (`node e2e/capture-screenshots.mjs`), so they can't drift into showing a UI that no
+longer exists.
+
+| | |
+|---|---|
+| ![Board detail — Kanban and live alerts](docs/screenshots/board-detail.png) | ![The same board in the light theme](docs/screenshots/board-detail-light.png) |
+| **The board a reviewer lands on.** Colour-coded columns, per-task valid transitions, and the alert console on the right showing the two anomalies the worker raised on its first cycle. | **The same board, light theme.** One attribute on `<html>`; every colour comes from design tokens. |
+| ![Board list](docs/screenshots/board-list.png) | ![Profile and settings](docs/screenshots/profile.png) |
+| **Board list**, with the seeded demo workspace and a pending invitation in the bell. | **Profile & settings** — display name, avatar colour, password, theme. |
 
 ## Try the full workflow
 
-The interesting part of TaskFlow isn't visible from an empty board — here's a two-minute path
+The seeded demo already shows the finished state; this is how it gets built. A two-minute path
 that exercises the role/invitation/notification system end to end, straight against the API
-(swap in the web app at http://localhost:4200 for the same flow with a UI):
+(swap in the web app at http://localhost:4200 for the same flow with a UI — or sign in as
+`demo@taskflow.dev` and `sam@taskflow.dev` in two browser profiles and do it by hand):
 
 ```bash
 # 1. Register the board owner
@@ -246,13 +309,20 @@ npx ng lint
 # End-to-end (Playwright, against the real Docker stack — start it first)
 docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
 cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
+
+# Regenerate the README screenshots from the running (seeded) stack
+docker compose up --build -d && node e2e/capture-screenshots.mjs
 ```
+
+Each integration test class boots its own disposable Postgres container, so their parallelism
+is capped in `tests/IntegrationTests/xunit.runner.json` — without it, a dozen databases start
+at once and Docker starves on smaller machines.
 
 | Suite | Count | What it covers |
 |---|---|---|
-| Backend unit | 127 | Domain rules (state machines, validation, color palette, password policy, avatar color), CQRS handlers against an EF Core InMemory context |
-| Backend integration | 31 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, account lockout, security headers, avatar color, board membership/roles, invitations, notifications, SignalR hub authorization |
-| Frontend | 114 | Services (HTTP contracts + toasts), components (behavior via mocked services, incl. avatars, filters, user menu), interceptors, guards |
+| Backend unit | 166 | Domain rules (state machines, validation, color palette, password policy, avatar color, credential changes), CQRS handlers against an EF Core InMemory context, and the validation pipeline itself |
+| Backend integration | 49 | Full HTTP round-trips against a real Postgres container: auth, rate limiting, account lockout, security headers, profile/password changes, board membership/roles, invitations, notifications, SignalR hub authorization, and the seeded demo workspace |
+| Frontend | 137 | Services (HTTP contracts, theme, instance config, toasts), components (behavior via mocked services, incl. profile, avatars, filters, user menu), interceptors, guards |
 | End-to-end | 8 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, drag & drop, the close→confirm→archive→show-completed flow, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
 ## Project structure
@@ -261,16 +331,21 @@ cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwrigh
 src/
   Domain/            entities, enums, domain events, Result<T> — zero external dependencies
   Application/        CQRS handlers, validators, IBoardAuthorizer, interfaces
-  Infrastructure/      EF Core, LoadMonitorWorker, alert evaluators, SignalR, JWT/password hashing
+  Infrastructure/      EF Core, LoadMonitorWorker, alert evaluators, SignalR, JWT/password hashing,
+                       DemoDataSeeder
   Api/                 controllers, middleware, Program.cs
 frontend/              Angular 19 SPA
 tests/
   UnitTests/           Domain + Application unit tests
   IntegrationTests/     API integration tests against a real Postgres (Testcontainers)
-e2e/                   Playwright end-to-end tests against the full Docker stack
+e2e/                   Playwright end-to-end tests + capture-screenshots.mjs
 docs/
   adr/                 architecture decision records
+  screenshots/         README images, regenerated from the running app
   *.md                 dated notes on individual features/fixes as they were built
+.env.example           every configurable value, with its default
+docker-compose.yml     the demo stack (+ .e2e.yml and .prebuilt.yml overlays)
+Makefile               shortcuts for everything above
 ```
 
 ## Documentation
@@ -281,6 +356,9 @@ docs/
   [0002 — Clean Architecture + CQRS](docs/adr/0002-clean-architecture-cqrs.md) ·
   [0003 — SignalR for real-time alerts](docs/adr/0003-signalr-realtime-alerts.md) ·
   [0004 — Strategy pattern for alert rules](docs/adr/0004-alert-rule-strategy-pattern.md)
+- [`docs/2026-08-14-demo-seed-configuration-and-personalization.md`](docs/2026-08-14-demo-seed-configuration-and-personalization.md)
+  — the most recent entry: seeded demo workspace, `.env`-driven configuration, light theme and
+  profile page, plus a silent validation-pipeline bug they surfaced
 - `docs/*.md` — dated write-ups of individual features as they were built (auth, board roles,
   invitations/notifications, colors, and a couple of real bugs found and fixed along the way),
   each with what changed, why, and how it was verified.
@@ -288,5 +366,9 @@ docs/
 ## Roadmap
 
 Explicitly out of scope for now — see [`OVERVIEW.md`](OVERVIEW.md#5-future-work-explicitly-out-of-scope-for-v1)
-for the current list (e.g. renaming/deleting a board, changing a member's role beyond
-promote/demote-in-place already supported).
+for the current list (e.g. transferring board ownership, a finer-grained permission model than
+Owner/Member, and a hosted live demo).
+
+## License
+
+[MIT](LICENSE).

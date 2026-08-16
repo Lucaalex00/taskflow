@@ -31,6 +31,8 @@
         <p class="form-error user-menu__error">{{ errorMessage() }}</p>
       }
 
+      <a class="btn btn--ghost user-menu__link" routerLink="/profile" (click)="close()">Profile &amp; settings</a>
+
       <button class="btn btn--ghost user-menu__signout" type="button" (click)="signOut()">Sign out</button>
     </div>
   }

@@ -65,4 +65,42 @@ public class UserTests
         result.IsSuccess.Should().BeFalse();
         user.Color.Should().Be(original);
     }
+
+    [Fact]
+    public void ChangePasswordHash_ReplacesTheStoredHash()
+    {
+        var user = User.Create("alice@example.com", "Alice", "old-hash").Value;
+
+        var result = user.ChangePasswordHash("new-hash");
+
+        result.IsSuccess.Should().BeTrue();
+        user.PasswordHash.Should().Be("new-hash");
+    }
+
+    [Fact]
+    public void ChangePasswordHash_ClearsAnActiveLockout()
+    {
+        var user = User.Create("alice@example.com", "Alice", "old-hash").Value;
+        var now = new DateTime(2026, 8, 14, 9, 0, 0, DateTimeKind.Utc);
+        user.RegisterFailedLogin(now, maxAttempts: 1, lockoutDuration: TimeSpan.FromMinutes(15));
+        user.IsLockedOut(now).Should().BeTrue();
+
+        user.ChangePasswordHash("new-hash");
+
+        user.IsLockedOut(now).Should().BeFalse();
+        user.FailedLoginAttempts.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ChangePasswordHash_WithAnEmptyHash_FailsAndKeepsTheOldOne(string invalid)
+    {
+        var user = User.Create("alice@example.com", "Alice", "old-hash").Value;
+
+        var result = user.ChangePasswordHash(invalid);
+
+        result.IsSuccess.Should().BeFalse();
+        user.PasswordHash.Should().Be("old-hash");
+    }
 }
