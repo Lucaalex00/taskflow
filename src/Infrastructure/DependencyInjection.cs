@@ -49,6 +49,8 @@ public static class DependencyInjection
 
         services.Configure<SeedOptions>(configuration.GetSection(SeedOptions.SectionName));
         services.AddScoped<DemoDataSeeder>();
+        services.AddScoped<DemoWorkspaceResetter>();
+        services.AddHostedService<DemoResetWorker>();
         services.AddSingleton<IDemoAccountProvider, DemoAccountProvider>();
 
         services.Configure<LoadMonitorOptions>(configuration.GetSection(LoadMonitorOptions.SectionName));

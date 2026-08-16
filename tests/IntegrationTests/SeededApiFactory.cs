@@ -32,7 +32,10 @@ public sealed class SeededApiFactory : WebApplicationFactory<Program>, IAsyncLif
                 ["LoadMonitor:IntervalSeconds"] = "3600", // don't let the worker interfere mid-test
                 ["RateLimiting:Auth:PermitLimit"] = "1000",
                 ["Seed:Enabled"] = "true",
-                ["Seed:Password"] = SeedPassword
+                ["Seed:Password"] = SeedPassword,
+                // Matches the Docker demo's weekly refresh. Nothing here ages a workspace past
+                // it by accident, so the reset only fires in the test that asks for it.
+                ["Seed:ResetIntervalHours"] = "168"
             });
         });
     }

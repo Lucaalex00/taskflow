@@ -54,6 +54,10 @@ services:
       # that trips a real anomaly alert) on an empty database. Set to false for a blank start.
       Seed__Enabled: ${SEED_DEMO:-true}
       Seed__Password: ${SEED_PASSWORD:-Demo-password-2026}
+      # Wipes and re-seeds the demo workspace once it's older than this, so a demo you show
+      # people keeps looking the way it's meant to without anyone remembering to reset it.
+      # Set to 0 to switch the reset off and keep whatever you create.
+      Seed__ResetIntervalHours: ${SEED_RESET_INTERVAL_HOURS:-168}
     ports:
       - "${API_PORT:-5080}:8080"
     deploy:
@@ -73,6 +77,10 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    environment:
+      # Where nginx proxies /api and /hubs. The default is the API service on this compose
+      # network; a hosting platform needs its own internal address (see docs/deploying.md).
+      API_UPSTREAM: ${API_UPSTREAM:-api:8080}
     ports:
       - "${WEB_PORT:-4200}:8080"
     deploy:

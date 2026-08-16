@@ -33,3 +33,7 @@ Thumbs.db
 # --- Test results ---
 TestResults/
 coverage/
+
+# Intermediate frames from e2e/capture-demo-frames.mjs — only the assembled
+# docs/screenshots/demo.gif is committed.
+e2e/.demo-frames/

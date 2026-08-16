@@ -2,7 +2,7 @@
 # nothing in the project requires make, it just saves typing. On Windows use `make` from Git
 # Bash / WSL, or copy the command from the recipe.
 .DEFAULT_GOAL := help
-.PHONY: help up demo down reset logs build test test-backend test-frontend test-e2e lint env
+.PHONY: help up demo down reset logs build test test-backend test-frontend test-e2e lint env media
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -42,6 +42,9 @@ test-frontend: ## Karma/Jasmine tests, headless
 test-e2e: ## Playwright tests against the real Docker stack
 	docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
 	cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
+
+media: ## Regenerate the README screenshots and demo GIF (needs the seeded stack running)
+	cd e2e && node capture-screenshots.mjs && node capture-demo-frames.mjs && python build-demo-gif.py
 
 lint: ## Angular lint
 	cd frontend && npx ng lint
