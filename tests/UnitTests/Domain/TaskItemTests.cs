@@ -97,6 +97,67 @@ public class TaskItemTests
     }
 
     [Fact]
+    public void UpdateDetails_WithValidChanges_UpdatesTheTask()
+    {
+        var task = CreateValidTask();
+
+        var result = task.UpdateDetails("New title", "New desc", TaskPriority.High, dueAtUtc: null, DateTime.UtcNow);
+
+        result.IsSuccess.Should().BeTrue();
+        task.Title.Should().Be("New title");
+        task.Description.Should().Be("New desc");
+        task.Priority.Should().Be(TaskPriority.High);
+    }
+
+    [Fact]
+    public void UpdateDetails_WithAnEmptyTitle_ReturnsFailure()
+    {
+        var task = CreateValidTask();
+
+        var result = task.UpdateDetails("  ", null, TaskPriority.Low, null, DateTime.UtcNow);
+
+        result.IsSuccess.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UpdateDetails_SettingAChangedPastDueDate_ReturnsFailure()
+    {
+        var task = CreateValidTask();
+
+        var result = task.UpdateDetails("Title", null, TaskPriority.Low, DateTime.UtcNow.AddDays(-2), DateTime.UtcNow);
+
+        result.IsSuccess.Should().BeFalse();
+    }
+
+    [Fact]
+    public void UpdateDetails_KeepingAnExistingPastDueDate_IsAllowed()
+    {
+        // A task whose (once-valid) due date has since passed: editing an unrelated field must
+        // not force the date to change. Simulated by advancing "now" past the due date.
+        var due = DateTime.UtcNow.Date.AddDays(10); // future, so Create accepts it
+        var task = TaskItem.Create(Guid.NewGuid(), "Old", null, TaskPriority.Low, due).Value;
+        var laterNow = due.AddDays(30); // due is now in the past relative to this
+
+        var result = task.UpdateDetails("Renamed", null, TaskPriority.High, due, laterNow);
+
+        result.IsSuccess.Should().BeTrue();
+        task.Title.Should().Be("Renamed");
+    }
+
+    [Fact]
+    public void UpdateDetails_OnAnArchivedTask_ReturnsFailure()
+    {
+        var task = CreateValidTask();
+        task.TransitionTo(TaskState.InProgress);
+        task.TransitionTo(TaskState.Done);
+        task.Archive(DateTime.UtcNow);
+
+        var result = task.UpdateDetails("Nope", null, TaskPriority.Low, null, DateTime.UtcNow);
+
+        result.IsSuccess.Should().BeFalse();
+    }
+
+    [Fact]
     public void Archive_WhenTaskIsDone_MarksItArchived()
     {
         var task = CreateValidTask();

@@ -464,10 +464,23 @@
   box-shadow: none;
 }
 
-.task-card__archive {
+.task-card__tools {
   position: absolute;
   top: 6px;
   right: 6px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+/* Reveal the tools on hover/focus so they don't clutter the card at rest. */
+.task-card:hover .task-card__tools,
+.task-card__tools:focus-within {
+  opacity: 1;
+}
+
+.task-card__tool {
   width: 20px;
   height: 20px;
   display: inline-flex;
@@ -475,15 +488,20 @@
   justify-content: center;
   border: none;
   border-radius: 50%;
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text-muted);
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.task-card__archive:hover {
+.task-card__tool:hover {
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+}
+
+.task-card__tool--danger:hover {
   background: var(--color-critical-dim);
   color: var(--color-critical);
 }
@@ -747,4 +765,13 @@
 .alert-item__ack {
   padding: 4px 8px;
   font-size: 11px;
+}
+
+.kanban__title-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
 }

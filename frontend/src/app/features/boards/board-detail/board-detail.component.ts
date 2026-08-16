@@ -57,6 +57,11 @@ function validationMessageFrom(error: unknown): string | null {
 })
 export class BoardDetailComponent implements OnInit, OnDestroy {
   readonly boardId: string;
+
+  /** Null until the shared board list has loaded — the heading falls back to a generic label
+   * rather than flashing an empty title. */
+  readonly board = computed(() => this.boardService.boards().find((b) => b.id === this.boardId) ?? null);
+  readonly boardName = computed(() => this.board()?.name ?? 'Board');
   readonly columns: TaskState[] = [...BOARD_COLUMNS];
   readonly columnLabels = COLUMN_LABELS;
   readonly TaskPriority = TaskPriority;
@@ -137,12 +142,14 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     () => this.members().find((m) => m.userId === this.currentUser.userId())?.role === BoardRole.Owner
   );
 
-  // New task form state.
+  // Task form state (shared by the "new task" and "edit task" modal). editingTaskId is null
+  // when creating, or the id of the task being edited.
   newTaskTitle = '';
   newTaskDescription = '';
   newTaskPriority: TaskPriority = TaskPriority.Medium;
   newTaskDueDate = '';
   readonly isCreatingTask = signal(false);
+  readonly editingTaskId = signal<string | null>(null);
 
   // Invite member form state.
   newMemberEmail = '';
@@ -162,10 +169,20 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     this.boardId = this.route.snapshot.paramMap.get('id')!;
   }
 
+  /** The board's own row comes from BoardService's shared signal, which the board list already
+   * populates — refreshed here only when it's empty, i.e. when this page was opened directly
+   * (a bookmark, a reload, a link from a notification) rather than navigated to from the list. */
+  private async ensureBoardsLoaded(): Promise<void> {
+    if (this.boardService.boards().length === 0) {
+      await this.boardService.refresh();
+    }
+  }
+
   async ngOnInit(): Promise<void> {
     await Promise.all([
       this.loadTasks(),
       this.loadMembers(),
+      this.ensureBoardsLoaded(),
       this.alertService.connectToBoard(this.boardId)
     ]);
 
@@ -302,11 +319,47 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     return new Date().toISOString().split('T')[0];
   }
 
-  async createTask(): Promise<void> {
+  /** Opens the task modal in "create" mode with empty fields. */
+  openNewTask(): void {
+    this.editingTaskId.set(null);
+    this.newTaskTitle = '';
+    this.newTaskDescription = '';
+    this.newTaskPriority = TaskPriority.Medium;
+    this.newTaskDueDate = '';
+    this.errorMessage.set(null);
+    this.isTaskFormOpen.set(true);
+  }
+
+  /** Opens the task modal in "edit" mode, pre-filled from the given task. */
+  openEditTask(task: TaskDto): void {
+    this.editingTaskId.set(task.id);
+    this.newTaskTitle = task.title;
+    this.newTaskDescription = task.description ?? '';
+    this.newTaskPriority = task.priority;
+    this.newTaskDueDate = task.dueAtUtc ? task.dueAtUtc.split('T')[0] : '';
+    this.errorMessage.set(null);
+    this.isTaskFormOpen.set(true);
+  }
+
+  closeTaskForm(): void {
+    this.isTaskFormOpen.set(false);
+    this.editingTaskId.set(null);
+    this.errorMessage.set(null);
+    this.newTaskTitle = '';
+    this.newTaskDescription = '';
+    this.newTaskPriority = TaskPriority.Medium;
+    this.newTaskDueDate = '';
+  }
+
+  /** Handles the task modal submit for both create and edit. */
+  async saveTask(): Promise<void> {
     if (!this.newTaskTitle.trim()) return;
 
-    // Catch a past due date before hitting the server, with a message pointing at the field.
-    if (this.newTaskDueDate && this.newTaskDueDate < this.minDueDate) {
+    const editingId = this.editingTaskId();
+
+    // Catch a new past due date before hitting the server (skip when editing keeps an existing
+    // past date — the server allows that; the picker's min handles the common case).
+    if (!editingId && this.newTaskDueDate && this.newTaskDueDate < this.minDueDate) {
       this.errorMessage.set('Due date cannot be in the past — pick today or a later date.');
       return;
     }
@@ -314,28 +367,30 @@ export class BoardDetailComponent implements OnInit, OnDestroy {
     this.isCreatingTask.set(true);
     this.errorMessage.set(null);
 
+    const title = this.newTaskTitle.trim();
+    const request = {
+      title,
+      description: this.newTaskDescription.trim() || null,
+      priority: this.newTaskPriority,
+      dueAtUtc: this.newTaskDueDate ? new Date(this.newTaskDueDate).toISOString() : null
+    };
+
     try {
-      await this.taskService.create(this.boardId, {
-        title: this.newTaskTitle.trim(),
-        description: this.newTaskDescription.trim() || null,
-        priority: this.newTaskPriority,
-        dueAtUtc: this.newTaskDueDate ? new Date(this.newTaskDueDate).toISOString() : null
-      });
+      if (editingId) {
+        await this.taskService.update(editingId, request);
+      } else {
+        await this.taskService.create(this.boardId, request);
+      }
 
-      const createdTitle = this.newTaskTitle.trim();
-      this.newTaskTitle = '';
-      this.newTaskDescription = '';
-      this.newTaskPriority = TaskPriority.Medium;
-      this.newTaskDueDate = '';
-      this.isTaskFormOpen.set(false);
-
+      this.closeTaskForm();
       await this.loadTasks();
-      this.toast.success(`Task "${createdTitle}" created.`);
+      this.toast.success(editingId ? `Task "${title}" updated.` : `Task "${title}" created.`);
     } catch (error) {
       // Prefer the server's specific validation message (e.g. "Due date cannot be in the
       // past.") over a generic one, so the user knows exactly what to fix.
       this.errorMessage.set(
-        validationMessageFrom(error) ?? 'Could not create the task. Check the title and due date.'
+        validationMessageFrom(error) ??
+          (editingId ? 'Could not save the task.' : 'Could not create the task. Check the title and due date.')
       );
     } finally {
       this.isCreatingTask.set(false);

@@ -6,6 +6,7 @@ using TaskFlow.Application.Tasks.Commands.ArchiveTask;
 using TaskFlow.Application.Tasks.Commands.AssignTask;
 using TaskFlow.Application.Tasks.Commands.CreateTask;
 using TaskFlow.Application.Tasks.Commands.TransitionTaskState;
+using TaskFlow.Application.Tasks.Commands.UpdateTask;
 using TaskFlow.Application.Tasks.Queries.GetBoardTasks;
 using TaskFlow.Domain.Enums;
 
@@ -40,6 +41,21 @@ public sealed class TasksController(ISender sender) : ControllerBase
 
         var taskId = await sender.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetBoardTasks), new { boardId }, taskId);
+    }
+
+    /// <summary>Edits a task's content (title, description, priority, due date). Owner-only.</summary>
+    [HttpPut("tasks/{taskId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Update(
+        Guid taskId, UpdateTaskRequest request, CancellationToken cancellationToken)
+    {
+        await sender.Send(
+            new UpdateTaskCommand(taskId, request.Title, request.Description, request.Priority, request.DueAtUtc),
+            cancellationToken);
+        return NoContent();
     }
 
     /// <summary>Moves a task to a new state (e.g. Todo -> InProgress -> Done).</summary>
@@ -81,5 +97,6 @@ public sealed class TasksController(ISender sender) : ControllerBase
 }
 
 public sealed record CreateTaskRequest(string Title, string? Description, TaskPriority Priority, DateTime? DueAtUtc);
+public sealed record UpdateTaskRequest(string Title, string? Description, TaskPriority Priority, DateTime? DueAtUtc);
 public sealed record TransitionTaskStateRequest(TaskState NewState);
 public sealed record AssignTaskRequest(Guid UserId);

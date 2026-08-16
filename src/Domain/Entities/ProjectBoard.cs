@@ -17,6 +17,11 @@ public class ProjectBoard : Entity
 
     public DateTime CreatedAtUtc { get; private set; }
 
+    /// <summary>Set when the board is logically deleted ("archived"): its row (and its tasks)
+    /// stay in the database but it no longer appears in anyone's board list.</summary>
+    public DateTime? ArchivedAtUtc { get; private set; }
+    public bool IsArchived => ArchivedAtUtc is not null;
+
     private readonly List<TaskItem> _tasks = [];
     public IReadOnlyCollection<TaskItem> Tasks => _tasks.AsReadOnly();
 
@@ -46,9 +51,19 @@ public class ProjectBoard : Entity
         return Result.Success(new ProjectBoard(name.Trim(), ownerId, resolvedColor));
     }
 
-    public void Rename(string newName)
+    public Result Rename(string newName)
     {
-        if (!string.IsNullOrWhiteSpace(newName))
-            Name = newName.Trim();
+        if (string.IsNullOrWhiteSpace(newName))
+            return Result.Failure("Board name cannot be empty.");
+
+        Name = newName.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>Logical delete — keeps the board (and its tasks) in the database but removes it
+    /// from board lists. Idempotent.</summary>
+    public void Archive(DateTime nowUtc)
+    {
+        ArchivedAtUtc ??= nowUtc;
     }
 }

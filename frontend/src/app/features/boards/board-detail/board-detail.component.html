@@ -3,15 +3,18 @@
 <div class="board-layout">
   <section class="kanban">
     <div class="kanban__header">
-      <h1 class="kanban__title mono">Board</h1>
+      <h1 class="kanban__title mono">
+        @if (board(); as currentBoard) {
+          <span class="kanban__title-dot" [style.background]="currentBoard.color" aria-hidden="true"></span>
+        }
+        {{ boardName() }}
+      </h1>
       <div class="kanban__header-actions">
         <button class="btn btn--ghost" (click)="isMembersOpen.set(!isMembersOpen())">
           {{ isMembersOpen() ? 'Hide members' : 'Members (' + members().length + ')' }}
         </button>
         @if (isOwner()) {
-          <button class="btn btn--primary" (click)="isTaskFormOpen.set(!isTaskFormOpen())">
-            {{ isTaskFormOpen() ? 'Cancel' : '+ New task' }}
-          </button>
+          <button class="btn btn--primary" (click)="openNewTask()">+ New task</button>
         }
       </div>
     </div>
@@ -64,15 +67,15 @@
     }
 
     @if (isOwner() && isTaskFormOpen()) {
-      <button class="modal-backdrop" type="button" aria-label="Close" (click)="isTaskFormOpen.set(false)"></button>
+      <button class="modal-backdrop" type="button" aria-label="Close" (click)="closeTaskForm()"></button>
 
-      <div class="modal" role="dialog" aria-label="New task">
+      <div class="modal" role="dialog" [attr.aria-label]="editingTaskId() ? 'Edit task' : 'New task'">
         <div class="modal__header">
-          <h2 class="modal__title mono">New task</h2>
-          <button class="modal__close" type="button" aria-label="Close" (click)="isTaskFormOpen.set(false)">&times;</button>
+          <h2 class="modal__title mono">{{ editingTaskId() ? 'Edit task' : 'New task' }}</h2>
+          <button class="modal__close" type="button" aria-label="Close" (click)="closeTaskForm()">&times;</button>
         </div>
 
-        <form class="task-form" (ngSubmit)="createTask()">
+        <form class="task-form" (ngSubmit)="saveTask()">
           <label class="field">
             <span class="field__label">Title</span>
             <input class="field__input" type="text" name="title" [(ngModel)]="newTaskTitle" placeholder="What needs doing?" required />
@@ -104,9 +107,9 @@
           }
 
           <div class="modal__actions">
-            <button class="btn btn--ghost" type="button" (click)="isTaskFormOpen.set(false)">Cancel</button>
+            <button class="btn btn--ghost" type="button" (click)="closeTaskForm()">Cancel</button>
             <button class="btn btn--primary" type="submit" [disabled]="isCreatingTask()">
-              {{ isCreatingTask() ? 'Creating…' : 'Create task' }}
+              @if (isCreatingTask()) { Saving… } @else { {{ editingTaskId() ? 'Save changes' : 'Create task' }} }
             </button>
           </div>
         </form>
@@ -235,15 +238,27 @@
                     {{ task.title }}
                   </div>
 
-                  <!-- Owner-only logical delete on a completed (non-archived) task. -->
-                  @if (isOwner() && task.state === TaskState.Done && !task.isArchived) {
-                    <button
-                      class="task-card__archive"
-                      type="button"
-                      title="Remove this task (kept in history)"
-                      aria-label="Archive task"
-                      (click)="archiveTask(task)"
-                    >&times;</button>
+                  <!-- Owner-only card tools: edit any active task; archive (logical delete) a
+                       completed one. Hidden entirely on archived cards. -->
+                  @if (isOwner() && !task.isArchived) {
+                    <div class="task-card__tools">
+                      <button
+                        class="task-card__tool"
+                        type="button"
+                        title="Edit task"
+                        aria-label="Edit task"
+                        (click)="openEditTask(task)"
+                      >&#9998;</button>
+                      @if (task.state === TaskState.Done) {
+                        <button
+                          class="task-card__tool task-card__tool--danger"
+                          type="button"
+                          title="Remove this task (kept in history)"
+                          aria-label="Archive task"
+                          (click)="archiveTask(task)"
+                        >&times;</button>
+                      }
+                    </div>
                   }
 
                   <div class="task-card__top">

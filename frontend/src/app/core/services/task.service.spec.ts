@@ -76,6 +76,23 @@ describe('TaskService', () => {
     expect(await promise).toBe('task-1');
   });
 
+  it('update puts the edited task content', async () => {
+    const request = {
+      title: 'Edited',
+      description: 'new',
+      priority: TaskPriority.High,
+      dueAtUtc: null
+    };
+    const promise = service.update('task-1', request);
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/tasks/task-1`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual(request);
+    req.flush(null);
+
+    await promise;
+  });
+
   it('transitionState patches the task state', async () => {
     const promise = service.transitionState('task-1', TaskState.InProgress);
 

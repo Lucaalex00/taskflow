@@ -28,10 +28,10 @@ test.describe('Close & archive', () => {
     // Now in Done, locked (not draggable → no cdkDrag handle behavior) and with an archive X.
     const doneCard = page.locator('.column[data-state="Done"] .task-card', { hasText: 'Finish the report' });
     await expect(doneCard).toBeVisible();
-    await expect(doneCard.locator('.task-card__archive')).toBeVisible();
+    await expect(doneCard.locator('.task-card__tool--danger')).toBeVisible();
 
     // Archiving hides it from the board...
-    await doneCard.locator('.task-card__archive').click();
+    await doneCard.locator('.task-card__tool--danger').click();
     await expect(page.locator('.task-card', { hasText: 'Finish the report' })).toHaveCount(0);
 
     // ...until "show completed" is switched on in the filter panel.

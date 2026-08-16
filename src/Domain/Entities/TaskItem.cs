@@ -54,6 +54,31 @@ public class TaskItem : Entity
         return Result.Success(new TaskItem(boardId, title.Trim(), description?.Trim(), priority, dueAtUtc));
     }
 
+    /// <summary>Edits a task's content after creation. Rejects a title that's empty/too long and
+    /// a *changed* due date set in the past (an existing past due date is left alone so editing
+    /// an unrelated field doesn't force you to fix the date). An archived task can't be edited.</summary>
+    public Result UpdateDetails(string title, string? description, TaskPriority priority, DateTime? dueAtUtc, DateTime nowUtc)
+    {
+        if (IsArchived)
+            return Result.Failure("Cannot edit an archived task.");
+
+        if (string.IsNullOrWhiteSpace(title))
+            return Result.Failure("Task title cannot be empty.");
+
+        if (title.Length > 200)
+            return Result.Failure("Task title cannot exceed 200 characters.");
+
+        if (dueAtUtc is not null && dueAtUtc != DueAtUtc && dueAtUtc < nowUtc.Date)
+            return Result.Failure("Due date cannot be in the past.");
+
+        Title = title.Trim();
+        Description = description?.Trim();
+        Priority = priority;
+        DueAtUtc = dueAtUtc;
+        UpdatedAtUtc = nowUtc;
+        return Result.Success();
+    }
+
     public Result AssignTo(Guid userId)
     {
         if (userId == Guid.Empty)
