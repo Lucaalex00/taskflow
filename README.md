@@ -6,34 +6,63 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-A task management platform with **automatic workload-anomaly detection**: a background worker
-continuously watches every board's task load and pushes real-time alerts the moment a team
-member is overloaded, a board's active-task count spikes, or someone is juggling too many
-tasks at once — plus real authentication, board-scoped roles, an invitation/notification
-system, and per-board access control. Not a CRUD demo.
+**A team task tracker that watches workload and raises real-time alerts before someone drowns
+in it.** A background worker snapshots every board on a timer, evaluates configurable threshold
+rules, and pushes alerts to the browser over a WebSocket — on top of real authentication,
+board-scoped roles, and an invitation flow. Not a CRUD demo.
 
-**Try it in under two minutes:** `docker compose up --build`, then click *Explore the demo
-workspace* on the login screen — see [Quick start](#quick-start).
+## Run it
+
+**Docker is the only requirement.** Nothing to install, nothing to configure, no account to create.
+
+```bash
+git clone https://github.com/Lucaalex00/taskflow.git && cd taskflow
+docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+```
+
+Then open **http://localhost:4200** and click **Explore the demo workspace**.
+
+That's it. No build step — it pulls the images CI publishes on every green run. Measured from zero
+images on a warm Docker over a home connection: **16 seconds** to a seeded workspace with two
+populated boards and workload alerts already raised. Prefer to build from source? See
+[Quick start](#quick-start).
 
 ![One-click demo sign-in, a populated Kanban with live workload alerts, drag & drop between columns, and the light theme](docs/screenshots/demo.gif)
 
----
+## What this demonstrates
 
-## Table of contents
+- **A real background service, not a cron stub** — [`LoadMonitorWorker`](src/Infrastructure/Workers/LoadMonitorWorker.cs)
+  snapshots load and dispatches to per-rule [evaluators](src/Infrastructure/Workers/AlertEvaluators/);
+  a new rule type is a new class, never a change to the worker
+  ([why](docs/adr/0004-alert-rule-strategy-pattern.md)).
+- **Tests that would actually catch a regression** — 362 of them, including 51 full HTTP
+  round-trips against a **real Postgres container**, not mocks
+  ([example](tests/IntegrationTests/DemoSeedTests.cs)), and 8 Playwright runs against the
+  Docker stack.
+- **Business rules in the domain, not in controllers** — every legal task transition is
+  enumerated in one place ([`TaskItem`](src/Domain/Entities/TaskItem.cs)), and every
+  permission check funnels through one chokepoint
+  ([`BoardAuthorizer`](src/Application/Common/Services/BoardAuthorizer.cs)).
+- **Security treated as a requirement** — JWT on every endpoint *including the SignalR hub*,
+  per-IP rate limiting plus per-account lockout, PBKDF2 password hashing, and a strict CSP on
+  both the API and nginx.
+- **Reproducible by design** — one command, migrations and demo data applied automatically, a
+  demo workspace that [rebuilds itself weekly](docs/deploying.md#the-weekly-reset), and CI that
+  runs every suite before publishing the images above.
 
-- [Why this project exists](#why-this-project-exists)
-- [Key features](#key-features)
-- [Quick start](#quick-start)
-- [Configuration](#configuration)
-- [Screenshots](#screenshots)
-- [Try the full workflow](#try-the-full-workflow)
-- [Architecture](#architecture)
-- [Tech stack](#tech-stack)
-- [Testing](#testing)
-- [Project structure](#project-structure)
-- [Documentation](#documentation)
-- [Known limitations](#known-limitations)
-- [Roadmap](#roadmap)
+## Reviewing this in 5 minutes
+
+If you're deciding whether this is worth a longer look, these four are the ones I'd read:
+
+| Look at | Why |
+|---|---|
+| [`TaskItem.cs`](src/Domain/Entities/TaskItem.cs) | The state machine: every allowed transition in one auditable table, enforced in the domain and mirrored exactly by the UI's buttons. |
+| [`OverdueTasksThresholdEvaluator.cs`](src/Infrastructure/Workers/AlertEvaluators/OverdueTasksThresholdEvaluator.cs) | The whole "anomaly detection" feature in one 38-line class, and the shape every new rule plugs into. |
+| [`BoardMembersEndpointsTests.cs`](tests/IntegrationTests/BoardMembersEndpointsTests.cs) | How the Owner/Member boundary is proven: real HTTP, real Postgres, real 403s. |
+| [The `ValidationBehavior` bug](docs/2026-08-14-demo-seed-configuration-and-personalization.md#a-real-bug-this-surfaced) | A silent defect found by a test, why MediatR made it possible, and the test that stops it coming back. |
+
+Built over about four weeks of evenings, in 41 commits, with a dated write-up in
+[`docs/`](docs/) for every feature explaining what changed, why, and how it was verified.
 
 ## Why this project exists
 
@@ -126,17 +155,28 @@ the test suite to back every one of them up.
 
 ## Quick start
 
-**Requirements:** Docker Desktop (that's it — no local .NET/Node/Postgres install needed).
+**Requirements:** Docker Desktop. That's the whole list — no local .NET, Node or Postgres.
+
+### The fast way (no build)
 
 ```bash
-git clone https://github.com/Lucaalex00/taskflow.git
-cd taskflow
+docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+```
+
+Pulls the images CI publishes on every green run — seconds, not minutes. This is the one to use
+if you just want to see the app.
+
+### Building from source
+
+```bash
 docker compose up --build
 ```
 
-That's the whole setup — EF Core migrations apply automatically on API startup, and an empty
-database gets seeded with a demo workspace, so there's no manual database step and nothing to
-fill in before the app is worth looking at.
+Same result, built locally: a few minutes the first time, seconds afterwards. Use this if
+you've changed the code.
+
+Either way there is no database step — EF Core migrations apply on API startup, and an empty
+database is seeded with a demo workspace.
 
 | What | URL |
 |---|---|
@@ -144,18 +184,17 @@ fill in before the app is worth looking at.
 | API + Swagger | http://localhost:5080/swagger |
 | Health check | http://localhost:5080/health |
 
-**Sign in with one click.** The login screen offers *Explore the demo workspace* — two
-populated boards, three users with different roles, a pending invitation in the notification
-bell, and enough overdue/in-progress load that the anomaly detector raises a real alert within
-its first cycle. The credentials behind that button are `demo@taskflow.dev` /
-`Demo-password-2026` (the teammates are `sam@` and `priya@taskflow.dev`, same password), so you
-can open a second browser and watch both sides of the invite/assign flow at once.
+### Signing in
 
-**In a hurry?** Skip the build entirely and pull the images CI already published:
+Click **Explore the demo workspace** on the login screen. Behind it: `demo@taskflow.dev` /
+`Demo-password-2026` — two populated boards, three users with different roles, a pending
+invitation in the notification bell, and enough overdue work that the anomaly detector raises a
+real alert on its first cycle.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
-```
+The teammates are `sam@taskflow.dev` and `priya@taskflow.dev`, same password. Open one in a
+second browser profile to watch both sides of the invite → accept → assign flow at once.
+
+### Day-to-day
 
 ```bash
 docker compose logs api -f     # tail API logs (Serilog output)
@@ -163,8 +202,8 @@ docker compose down            # stop (keeps the Postgres volume)
 docker compose down -v         # stop and wipe all data (the next start re-seeds the demo)
 ```
 
-There's a `Makefile` wrapping all of the above — `make up`, `make demo`, `make reset`,
-`make test`, `make test-e2e` — run `make` on its own for the list.
+A `Makefile` wraps all of it — `make up`, `make demo`, `make reset`, `make test`, `make media` —
+run `make` on its own for the list.
 
 ## Configuration
 
