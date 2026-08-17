@@ -2,21 +2,26 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { LoginComponent } from './login.component';
 import { CurrentUserService } from '../../../core/services/current-user.service';
+import { AppConfigService } from '../../../core/services/app-config.service';
 
 describe('LoginComponent', () => {
   let currentUser: jasmine.SpyObj<CurrentUserService>;
   let router: jasmine.SpyObj<Router>;
+  let appConfig: jasmine.SpyObj<AppConfigService>;
 
   function createComponent() {
     currentUser = jasmine.createSpyObj<CurrentUserService>('CurrentUserService', ['login', 'register']);
     router = jasmine.createSpyObj<Router>('Router', ['navigateByUrl']);
     router.navigateByUrl.and.resolveTo(true);
+    appConfig = jasmine.createSpyObj<AppConfigService>('AppConfigService', ['load']);
+    appConfig.load.and.resolveTo({ demoAccountAvailable: false, demoEmail: null, demoPassword: null });
 
     TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
         { provide: CurrentUserService, useValue: currentUser },
-        { provide: Router, useValue: router }
+        { provide: Router, useValue: router },
+        { provide: AppConfigService, useValue: appConfig }
       ]
     });
 
@@ -126,5 +131,59 @@ describe('LoginComponent', () => {
     await component.submit();
 
     expect(currentUser.register).not.toHaveBeenCalled();
+  });
+
+  it('offers the demo account when the instance seeded one', async () => {
+    const { component } = createComponent();
+    appConfig.load.and.resolveTo({
+      demoAccountAvailable: true,
+      demoEmail: 'demo@taskflow.dev',
+      demoPassword: 'Demo-password-2026'
+    });
+
+    await component.ngOnInit();
+
+    expect(component.demoAccount()?.demoEmail).toBe('demo@taskflow.dev');
+  });
+
+  it('hides the demo account on an instance without one', async () => {
+    const { component } = createComponent();
+
+    await component.ngOnInit();
+
+    expect(component.demoAccount()).toBeNull();
+  });
+
+  it('signInAsDemo logs in with the advertised credentials and navigates home', async () => {
+    const { component } = createComponent();
+    currentUser.login.and.resolveTo(undefined);
+    component.demoAccount.set({
+      demoAccountAvailable: true,
+      demoEmail: 'demo@taskflow.dev',
+      demoPassword: 'Demo-password-2026'
+    });
+
+    await component.signInAsDemo();
+
+    expect(currentUser.login).toHaveBeenCalledWith({
+      email: 'demo@taskflow.dev',
+      password: 'Demo-password-2026'
+    });
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
+  it('signInAsDemo surfaces an error instead of navigating when the demo login fails', async () => {
+    const { component } = createComponent();
+    currentUser.login.and.rejectWith(new Error('nope'));
+    component.demoAccount.set({
+      demoAccountAvailable: true,
+      demoEmail: 'demo@taskflow.dev',
+      demoPassword: 'Demo-password-2026'
+    });
+
+    await component.signInAsDemo();
+
+    expect(router.navigateByUrl).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('demo account is unavailable');
   });
 });

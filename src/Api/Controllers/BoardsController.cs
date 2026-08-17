@@ -2,8 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskFlow.Application.Boards;
+using TaskFlow.Application.Boards.Commands.ArchiveBoard;
 using TaskFlow.Application.Boards.Commands.CreateBoard;
 using TaskFlow.Application.Boards.Commands.InviteBoardMember;
+using TaskFlow.Application.Boards.Commands.RenameBoard;
 using TaskFlow.Application.Boards.Commands.RemoveBoardMember;
 using TaskFlow.Application.Boards.Commands.UpdateBoardMemberRole;
 using TaskFlow.Application.Boards.Queries.GetBoardMembers;
@@ -34,6 +36,31 @@ public sealed class BoardsController(ISender sender) : ControllerBase
     {
         var boardId = await sender.Send(command, cancellationToken);
         return CreatedAtAction(nameof(GetAll), new { id = boardId }, boardId);
+    }
+
+    /// <summary>Renames a board. Owner-only.</summary>
+    [HttpPatch("{boardId:guid}/name")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Rename(
+        Guid boardId, RenameBoardRequest request, CancellationToken cancellationToken)
+    {
+        await sender.Send(new RenameBoardCommand(boardId, request.Name), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>Archives (logically deletes) a board — hidden from lists but kept in the
+    /// database with its tasks. Owner-only.</summary>
+    [HttpPatch("{boardId:guid}/archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Archive(Guid boardId, CancellationToken cancellationToken)
+    {
+        await sender.Send(new ArchiveBoardCommand(boardId), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>Lists a board's members and their roles. Requires board membership.</summary>
@@ -87,3 +114,4 @@ public sealed class BoardsController(ISender sender) : ControllerBase
 
 public sealed record InviteBoardMemberRequest(string Email);
 public sealed record UpdateBoardMemberRoleRequest(BoardRole Role);
+public sealed record RenameBoardRequest(string Name);

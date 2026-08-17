@@ -76,3 +76,43 @@
   justify-content: center;
   font-family: var(--font-display);
 }
+
+/* --- Demo access (only rendered on a seeded instance) --- */
+
+.demo-access {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.demo-access__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.demo-access__divider::before,
+.demo-access__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.demo-access__button {
+  width: 100%;
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.demo-access__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}

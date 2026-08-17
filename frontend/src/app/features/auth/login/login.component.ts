@@ -1,9 +1,10 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CurrentUserService } from '../../../core/services/current-user.service';
+import { AppConfigService, PublicConfig } from '../../../core/services/app-config.service';
 
 type Mode = 'login' | 'register';
 
@@ -23,8 +24,11 @@ const MIN_PASSWORD_LENGTH = 10;
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   readonly mode = signal<Mode>('login');
+  /** Non-null only on an instance that seeded one (see AppConfigService) — a deployment with
+   * SEED_DEMO=false simply never renders the button. */
+  readonly demoAccount = signal<PublicConfig | null>(null);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -47,8 +51,33 @@ export class LoginComponent {
 
   constructor(
     private readonly currentUser: CurrentUserService,
+    private readonly appConfig: AppConfigService,
     private readonly router: Router
   ) {}
+
+  async ngOnInit(): Promise<void> {
+    const config = await this.appConfig.load();
+    if (config.demoAccountAvailable) this.demoAccount.set(config);
+  }
+
+  /** One click into a populated workspace. Goes through the ordinary login endpoint with the
+   * seeded account's real credentials — there is no separate "demo" authentication path. */
+  async signInAsDemo(): Promise<void> {
+    const demo = this.demoAccount();
+    if (!demo?.demoEmail || !demo.demoPassword) return;
+
+    this.isSubmitting.set(true);
+    this.errorMessage.set(null);
+
+    try {
+      await this.currentUser.login({ email: demo.demoEmail, password: demo.demoPassword });
+      await this.router.navigateByUrl('/');
+    } catch {
+      this.errorMessage.set('The demo account is unavailable on this instance.');
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
 
   switchMode(mode: Mode): void {
     this.mode.set(mode);

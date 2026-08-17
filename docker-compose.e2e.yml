@@ -3,7 +3,12 @@
 # tight, since a handful of E2E tests registering their own users would otherwise trip it.
 #
 # Usage: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
+#
+# It also turns the demo seeder off: the E2E suite registers its own users and asserts on what
+# it created, so a pre-populated workspace would only add noise (and a second board named by
+# someone else) to those assertions.
 services:
   api:
     environment:
       RateLimiting__Auth__PermitLimit: "1000"
+      Seed__Enabled: "false"

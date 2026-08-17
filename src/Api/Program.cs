@@ -49,6 +49,18 @@ builder.Services.AddHealthChecks()
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
     ?? throw new InvalidOperationException("Missing 'Jwt' configuration section.");
 
+// The default signing key ships in appsettings.json (and in .env.example) so the Docker demo
+// works with zero configuration — which also means it's public. Fail fast rather than run a
+// real deployment where anyone can mint a valid token for any user.
+const string DemoJwtSecret = "dev-only-secret-change-me-in-any-real-deployment-32chars+";
+if (builder.Environment.IsProduction()
+    && (jwtOptions.Secret == DemoJwtSecret || jwtOptions.Secret.Length < 32))
+{
+    throw new InvalidOperationException(
+        "Jwt:Secret is the built-in demo key or shorter than 32 characters. Set a real one "
+        + "(env var Jwt__Secret, or JWT_SECRET in .env) before running in Production.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -135,6 +147,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TaskFlowDbContext>();
     await db.Database.MigrateAsync();
+
+    // Populates a demo workspace when enabled (Seed:Enabled) AND the database is empty —
+    // see DemoDataSeeder. Off by default; docker-compose.yml turns it on for the demo.
+    await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
 }
 
 // --- Middleware pipeline ---------------------------------------------------

@@ -22,6 +22,10 @@ export class TaskService {
     return firstValueFrom(this.http.post<string>(`${this.baseUrl}/boards/${boardId}/tasks`, request));
   }
 
+  update(taskId: string, request: CreateTaskRequest): Promise<void> {
+    return firstValueFrom(this.http.put<void>(`${this.baseUrl}/tasks/${taskId}`, request));
+  }
+
   transitionState(taskId: string, newState: TaskState): Promise<void> {
     return firstValueFrom(
       this.http.patch<void>(`${this.baseUrl}/tasks/${taskId}/state`, { newState })

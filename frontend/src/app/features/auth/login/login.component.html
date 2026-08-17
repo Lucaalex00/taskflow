@@ -89,4 +89,17 @@
       {{ isSubmitting() ? 'Please wait…' : mode() === 'login' ? 'Sign in' : 'Create account' }}
     </button>
   </form>
+
+  @if (demoAccount(); as demo) {
+    <div class="demo-access">
+      <span class="demo-access__divider"><span>or</span></span>
+      <button class="btn demo-access__button" type="button" (click)="signInAsDemo()" [disabled]="isSubmitting()">
+        Explore the demo workspace
+      </button>
+      <p class="demo-access__hint muted">
+        Signs you in as <span class="mono">{{ demo.demoEmail }}</span> — two boards already populated,
+        with a workload anomaly alert waiting on the launch board.
+      </p>
+    </div>
+  }
 </section>

@@ -93,7 +93,11 @@ One folder per aggregate, one subfolder per use case:
 - **`Notifications`**: `GetNotifications`, `MarkNotificationRead`
 - **`Alerts`**: `GetBoardAlerts`, `MarkAlertRead`
 - **`AlertRules`**: `CreateAlertRule`
-- **`Users`**: `CreateUser`, `Login`
+- **`Users`**: `CreateUser`, `Login`, `UpdateProfile` (rename yourself), `ChangePassword`
+  (verifies the current password first), `UpdateUserColor`, `GetUsers`
+- **`Configuration`**: `GetPublicConfig` — the only anonymous read in the app: whether this
+  instance has a seeded demo account, and (if so) its credentials, so the login screen can
+  offer one-click access without a separate authentication path
 - **`Common`**: `ITaskFlowDbContext`, `IAlertNotifier`, `IDateTimeProvider`, `IBoardAuthorizer`
   (interfaces Infrastructure implements; `IBoardAuthorizer` is the single chokepoint every
   handler calls for `EnsureMemberAsync`/`EnsureOwnerAsync` role checks), `ValidationBehavior`
@@ -114,6 +118,19 @@ One folder per aggregate, one subfolder per use case:
   - `ConcurrentInProgressThresholdEvaluator` — per-user concurrent in-progress count
 - **`Realtime`**: `AlertsHub` (SignalR hub, group-per-board) + `SignalRAlertNotifier`
   (implements `IAlertNotifier`)
+- **`Persistence/DemoDataSeeder`** (+ `SeedOptions`): populates an empty database with a demo
+  workspace — three users, two populated boards, an unanswered invitation, and deliberately
+  unhealthy load on one assignee so the anomaly detector fires on its first cycle. Runs only
+  when `Seed:Enabled` is set *and* the database has no users; builds everything through the
+  real domain factories and the real password hasher, so seeded accounts are ordinary accounts
+- **`Persistence/DemoWorkspaceResetter`** + **`Workers/DemoResetWorker`**: returns a demo
+  instance to its pristine seeded state once the workspace ages past `Seed:ResetIntervalHours`
+  (off by default), deleting everything — including accounts visitors registered — and
+  re-seeding. Staleness is measured from the demo owner's `CreatedAtUtc` rather than a timer
+  started at boot, so a host that sleeps between visits still refreshes; the worker polls that
+  persisted age every 15 minutes and refuses to run when no demo owner exists
+- **`Services/DemoAccountProvider`**: implements `IDemoAccountProvider` off the seeder's own
+  options, so the login screen can never advertise credentials the seeder didn't create
 - **`Services/DateTimeProvider`**: the only place `DateTime.UtcNow` is called in
   production code, so tests can substitute a fake clock
 - **`Services/PasswordHasher`**: PBKDF2-HMAC-SHA256 password hashing (custom, not ASP.NET
@@ -148,11 +165,20 @@ One folder per aggregate, one subfolder per use case:
     `boards` signal so any component (e.g. the notification bell after accepting an invite)
     can trigger a refresh that every consumer sees
   - `NotificationService` — REST fetch, exposes a shared `notifications` signal
+  - `ThemeService` — dark/light choice, stored per browser and applied as `data-theme` on
+    `<html>`; every colour in the app resolves from the design tokens in `styles.scss`, so the
+    light theme is a token override, not a second stylesheet
+  - `AppConfigService` — reads `/api/config` before sign-in to decide whether to offer the
+    demo account; never rejects, so a failed call can't break the login form
   - `AlertService` — REST fetch + SignalR connection lifecycle (`connectToBoard`/`disconnect`), exposes a live `alerts` signal
 - **`core/interceptors`** / **`core/guards`**: an `HttpInterceptorFn` attaches the JWT to
   every request and signs the user out on 401; a `CanActivateFn` guard protects authenticated
   routes
-- **`features/auth`**: login/register forms
+- **`features/auth`**: login/register forms, plus the "Explore the demo workspace" button
+  (shown only on a seeded instance; it performs an ordinary login with the demo credentials)
+- **`features/profile`**: display name, avatar colour, password change (current password
+  required, new one held to the same policy as registration), and the theme choice
+- **`shared/theme-toggle`**: header control that flips dark/light
 - **`features/boards/board-list`**: board grid (Owner-only create-board form), each card
   showing "created by you" vs "created by {owner}"
 - **`features/boards/board-detail`**: Kanban columns (Todo/In progress/Blocked/Done,
@@ -171,27 +197,45 @@ One folder per aggregate, one subfolder per use case:
 - **`UnitTests/Application`**: handler tests for every command/query above (including
   Owner/Member authorization outcomes, e.g. `CreateTaskCommandHandlerTests` Forbidden case) and
   validator tests (e.g. `CreateUserCommandValidatorTests` for the password policy) against an
-  EF Core InMemory-backed fake context — **112 tests**
+  EF Core InMemory-backed fake context, plus `Common/ValidationBehaviorTests` (which pins down
+  that void commands really do run through the validation pipeline)
 - **`IntegrationTests`**: full HTTP round-trips against a real, disposable Postgres
   container — auth (register/login), the login/register rate limiter, security headers, board
   membership/roles, invitations, notifications, task creation/assignment authorization,
-  SignalR hub authentication/board-membership checks, per-account lockout — **26 tests**
+  SignalR hub authentication/board-membership checks, per-account lockout, profile rename and
+  password change, and the seeded demo workspace (`DemoSeedTests`, against a factory that runs
+  with seeding on, exactly like the Docker demo), and the scheduled demo reset
+  (`DemoWorkspaceResetterTests` — the one operation that deliberately destroys data, so it's
+  exercised against real foreign keys)
 - **`e2e`** (Playwright, `@playwright/test`): drives real Chromium browsers against the actual
   Docker stack (not a mocked backend) — auth redirects, register/sign-out/sign-in, wrong
-  password, board creation, and a two-browser-context walk through the full owner/member
-  workflow (invite by email, accept from the notification bell, assign, move through the
-  state machine, and the role boundary itself) — **6 tests**. Run via
+  password, board creation, drag & drop, the close→confirm→archive flow, and a
+  two-browser-context walk through the full owner/member workflow (invite by email, accept from
+  the notification bell, assign, move through the state machine, and the role boundary itself)
+  — **8 tests**. The overlay turns the demo seeder off, so these tests assert only on data they
+  created themselves. Run via
   `docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d` then
-  `cd e2e && npm ci && npx playwright test`
+  `cd e2e && npm ci && npx playwright test`. The same folder holds
+  `capture-screenshots.mjs`, which drives the running stack to regenerate `docs/screenshots/`
 
 ### 2.7 Infrastructure-as-config
+- **`.env.example`**: every configurable value with its default — ports, database credentials,
+  JWT secret/expiry, rate limits, monitor interval, demo seeding, resource caps
 - **`docker-compose.yml`**: orchestrates `postgres`, `api`, `frontend` — each with a
-  `restart: unless-stopped` policy and a `deploy.resources.limits` (cpus/memory) cap
+  `restart: unless-stopped` policy and a `deploy.resources.limits` (cpus/memory) cap. Every
+  value is `${VAR:-default}`, so a `.env` overrides anything and no `.env` still works
+- **`docker-compose.prebuilt.yml`**: overlay that runs the GHCR images CI publishes instead of
+  building from source — a pull instead of a full .NET + Angular build
+- **`Makefile`**: `up`, `demo`, `down`, `reset`, `logs`, `build`, `test`, `test-e2e`, `lint`
 - **`docker-compose.e2e.yml`**: overlay used only by the Playwright suite — relaxes the
   login/register rate limit so E2E tests registering their own users don't trip it, without
   touching the realistic default in `docker-compose.yml`
 - **`Dockerfile.api`** / **`Dockerfile.frontend`**: multi-stage builds (SDK/Node -> slim runtime)
-- **`docker/nginx.conf`**: serves the Angular build, proxies `/api/` and `/hubs/` to the API container (avoids CORS in the Docker demo)
+- **`docker/default.conf.template`**: serves the Angular build and proxies `/api/` and `/hubs/`
+  to `${API_UPSTREAM}` (avoids CORS entirely — the browser only ever talks to one origin). The
+  nginx image's entrypoint runs envsubst over it at container start, so the API's address is
+  configuration rather than a rebuild; `NGINX_ENVSUBST_FILTER` keeps envsubst away from nginx's
+  own `$uri`/`$host` variables. See [`docs/deploying.md`](docs/deploying.md)
 - **`.github/workflows/ci.yml`**: backend build+test (with a real Postgres service
   container), frontend build+test, end-to-end tests (full Docker stack + Playwright), Docker
   build & push to GHCR on `main` + Trivy vulnerability scan of both published images
@@ -216,7 +260,15 @@ One folder per aggregate, one subfolder per use case:
    - a user juggling too many concurrent in-progress tasks (context-switch risk)
 5. **Real-time delivery**: alerts appear in the UI instantly via SignalR, no polling
 6. **Configurable thresholds**: alert rules (threshold + evaluation window) are created per board via the API, not hardcoded
-7. **Self-contained demo**: `docker compose up --build` is the entire setup — migrations apply automatically on API startup
+7. **Personalization**: a light theme alongside the dark console default (header toggle,
+   remembered per browser), and a profile page for display name, avatar colour and password
+8. **Configurable instance**: ports, database credentials, JWT secret/expiry, rate limits,
+   monitor interval and demo seeding are all environment variables with working defaults
+   (`.env.example`); nothing needs editing to run the demo, nothing is hardcoded to run it
+   elsewhere
+9. **Self-contained demo**: `docker compose up --build` is the entire setup — migrations apply
+   automatically on API startup, and an empty database is seeded with a workspace that already
+   has anomaly alerts to look at
 
 ---
 
@@ -258,7 +310,20 @@ npx ng test                                    # interactive (Karma + Chrome)
 npx ng test --watch=false --browsers=ChromeHeadless   # CI mode
 ```
 
-### 4.6 Full stack via Docker
+### 4.6 Configuration
+
+```bash
+cp .env.example .env      # or: make env — then edit anything; compose picks it up
+```
+Every variable is documented in `.env.example` and in README's Configuration table. Three worth
+knowing: `SEED_DEMO` (demo workspace on an empty database, on by default), `JWT_SECRET` (the API
+refuses to start with the built-in demo key when `ASPNETCORE_ENVIRONMENT=Production`), and
+`SEED_RESET_INTERVAL_HOURS` (weekly rebuild of the demo workspace; `0` disables it).
+
+Deploying the published images to a public host is covered in
+[`docs/deploying.md`](docs/deploying.md).
+
+### 4.7 Full stack via Docker
 ```bash
 docker compose up --build      # first run / after any Dockerfile or dependency change
 docker compose up              # subsequent runs
@@ -271,12 +336,10 @@ docker compose logs api -f     # tail API logs (Serilog output)
 
 ## 5. Future work (explicitly out of scope for v1)
 
-- Renaming or deleting a board (the domain model supports renaming internally, but no
-  command/endpoint exposes it yet; deletion isn't modeled at all)
-- Promoting/demoting a member beyond `UpdateBoardMemberRole`'s Owner/Member toggle (e.g. a
-  finer-grained permission model, or transferring board ownership)
+- Transferring board ownership, or a permission model finer-grained than Owner/Member
+- Email delivery for invitations (they're in-app notifications only)
 - A hosted, one-click live demo (today the project is Docker-first: `docker compose up
-  --build` is the fastest path to trying it)
+  --build`, or the prebuilt-image overlay, is the fastest path to trying it)
 
 ## 6. Feature history
 
@@ -308,3 +371,5 @@ what changed, why, and how it was verified:
 - [`docs/2026-07-27-toasts-and-empty-states.md`](docs/2026-07-27-toasts-and-empty-states.md) — toast confirmations and clearer empty states
 - [`docs/2026-07-27-new-task-modal-and-hover-polish.md`](docs/2026-07-27-new-task-modal-and-hover-polish.md) — new-task modal and hover polish
 - [`docs/2026-07-28-close-confirm-archive-and-filter-dropdown.md`](docs/2026-07-28-close-confirm-archive-and-filter-dropdown.md) — close-confirmation, locked Done cards, logical delete (archive) + show-completed, and the filter dropdown
+- [`docs/2026-08-14-demo-seed-configuration-and-personalization.md`](docs/2026-08-14-demo-seed-configuration-and-personalization.md) — the seeded demo workspace, `.env`-driven configuration, light theme + profile page, and a silent validation-pipeline bug they surfaced
+- [`docs/2026-08-17-self-refreshing-demo-and-deployability.md`](docs/2026-08-17-self-refreshing-demo-and-deployability.md) — the scheduled demo reset, a configurable nginx upstream so the published images deploy anywhere, and the README animation

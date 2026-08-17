@@ -32,4 +32,39 @@ public class ProjectBoardTests
 
         result.IsSuccess.Should().BeFalse();
     }
+
+    [Fact]
+    public void Rename_WithANewName_UpdatesTheName()
+    {
+        var board = ProjectBoard.Create("Old name", Guid.NewGuid()).Value;
+
+        var result = board.Rename("  New name  ");
+
+        result.IsSuccess.Should().BeTrue();
+        board.Name.Should().Be("New name");
+    }
+
+    [Fact]
+    public void Rename_WithAnEmptyName_ReturnsFailureAndKeepsTheName()
+    {
+        var board = ProjectBoard.Create("Keep me", Guid.NewGuid()).Value;
+
+        var result = board.Rename("   ");
+
+        result.IsSuccess.Should().BeFalse();
+        board.Name.Should().Be("Keep me");
+    }
+
+    [Fact]
+    public void Archive_MarksTheBoardArchived_AndIsIdempotent()
+    {
+        var board = ProjectBoard.Create("Sprint 1", Guid.NewGuid()).Value;
+
+        board.Archive(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var firstArchivedAt = board.ArchivedAtUtc;
+        board.Archive(new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        board.IsArchived.Should().BeTrue();
+        board.ArchivedAtUtc.Should().Be(firstArchivedAt); // unchanged on the second call
+    }
 }

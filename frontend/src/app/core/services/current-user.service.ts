@@ -56,6 +56,25 @@ export class CurrentUserService {
     this.colorSignal.set(result.color);
   }
 
+  /** Renames the signed-in user and keeps the locally cached name in step, so the header
+   * avatar and every "created by you" label update without a reload. */
+  async updateDisplayName(displayName: string): Promise<void> {
+    const result = await firstValueFrom(
+      this.http.patch<UserDto>(`${environment.apiUrl}/users/me`, { displayName })
+    );
+
+    localStorage.setItem(STORAGE_KEY_NAME, result.displayName);
+    this.userNameSignal.set(result.displayName);
+  }
+
+  /** Changes the password. Deliberately does not touch the stored token: the existing JWT stays
+   * valid until it expires, so changing your password doesn't sign you out mid-session. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await firstValueFrom(
+      this.http.post<void>(`${environment.apiUrl}/users/me/password`, { currentPassword, newPassword })
+    );
+  }
+
   signOut(): void {
     localStorage.removeItem(STORAGE_KEY_TOKEN);
     localStorage.removeItem(STORAGE_KEY_USER_ID);

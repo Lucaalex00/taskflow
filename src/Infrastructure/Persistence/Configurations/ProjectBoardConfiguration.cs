@@ -11,6 +11,7 @@ public class ProjectBoardConfiguration : IEntityTypeConfiguration<ProjectBoard>
         builder.ToTable("project_boards");
         builder.HasKey(b => b.Id);
         builder.Ignore(b => b.DomainEvents);
+        builder.Ignore(b => b.IsArchived); // computed from ArchivedAtUtc, not a stored column
 
         builder.Property(b => b.Name).HasMaxLength(100).IsRequired();
         builder.Property(b => b.OwnerId).IsRequired();

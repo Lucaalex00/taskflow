@@ -13,6 +13,11 @@ export const routes: Routes = [
       import('./features/boards/board-list/board-list.component').then((m) => m.BoardListComponent)
   },
   {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/profile/profile.component').then((m) => m.ProfileComponent)
+  },
+  {
     path: 'boards/:id',
     canActivate: [authGuard],
     loadComponent: () =>

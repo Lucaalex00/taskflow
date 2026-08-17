@@ -1,0 +1,17 @@
+# Overlay that runs the images CI already published to GHCR instead of building from source.
+# Skips a full .NET + Angular build (minutes) in favour of a pull (seconds) — the fastest way
+# to just look at the running app.
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+#
+# Override IMAGE_REGISTRY / IMAGE_TAG in .env to pin a specific commit instead of :latest.
+services:
+  api:
+    image: ${IMAGE_REGISTRY:-ghcr.io/lucaalex00/taskflow}/api:${IMAGE_TAG:-latest}
+    # Compose merges (rather than replaces) the base file's `build:` block, so pull_policy
+    # is what actually keeps it from building: use the registry image, never the Dockerfile.
+    pull_policy: always
+
+  frontend:
+    image: ${IMAGE_REGISTRY:-ghcr.io/lucaalex00/taskflow}/frontend:${IMAGE_TAG:-latest}
+    pull_policy: always

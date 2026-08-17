@@ -113,4 +113,36 @@ describe('CurrentUserService', () => {
     expect(localStorage.getItem('taskflow.currentUserName')).toBeNull();
     expect(localStorage.getItem('taskflow.currentUserColor')).toBeNull();
   });
+
+  it('updateDisplayName patches the profile and keeps the cached name in step', async () => {
+    localStorage.setItem('taskflow.currentUserName', 'Ada');
+    const service = createService();
+
+    const promise = service.updateDisplayName('Ada Lovelace');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/me`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ displayName: 'Ada Lovelace' });
+    req.flush({ id: 'user-1', displayName: 'Ada Lovelace', email: 'ada@example.com', color: '#4fd1c5' });
+
+    await promise;
+    expect(service.displayName()).toBe('Ada Lovelace');
+    expect(localStorage.getItem('taskflow.currentUserName')).toBe('Ada Lovelace');
+  });
+
+  it('changePassword posts both passwords and leaves the session token untouched', async () => {
+    localStorage.setItem('taskflow.authToken', 'jwt-token');
+    const service = createService();
+
+    const promise = service.changePassword('Old-password-1', 'New-password-2');
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/users/me/password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ currentPassword: 'Old-password-1', newPassword: 'New-password-2' });
+    req.flush(null);
+
+    await promise;
+    expect(service.token()).toBe('jwt-token');
+    expect(service.isAuthenticated()).toBeTrue();
+  });
 });

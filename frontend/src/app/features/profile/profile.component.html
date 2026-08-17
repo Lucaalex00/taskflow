@@ -1,0 +1,115 @@
+<section class="profile">
+  <a class="profile__back mono muted" routerLink="/">← Back to boards</a>
+  <h1 class="profile__title">Profile &amp; settings</h1>
+
+  <div class="panel">
+    <h2 class="panel__title">Identity</h2>
+    <p class="panel__hint muted">How you appear to everyone else on your boards.</p>
+
+    <div class="profile__identity">
+      <app-avatar [name]="currentUser.displayName()" [color]="currentUser.color()" size="lg" />
+      <div class="profile__identity-meta">
+        <span class="profile__identity-name">{{ currentUser.displayName() }}</span>
+        <label class="profile__color">
+          <span class="muted">Avatar color</span>
+          <input
+            type="color"
+            class="profile__color-input"
+            [value]="currentUser.color() ?? '#a855f7'"
+            (input)="onColorInput($event)"
+            [disabled]="isSavingColor()"
+            title="Pick your avatar color"
+          />
+        </label>
+      </div>
+    </div>
+
+    <form class="profile__form" (ngSubmit)="saveProfile()">
+      <label class="field">
+        <span class="field__label">Display name</span>
+        <input class="field__input" type="text" name="displayName" [(ngModel)]="displayName" maxlength="100" required />
+      </label>
+
+      @if (profileError()) {
+        <p class="form-error">{{ profileError() }}</p>
+      }
+
+      <button class="btn btn--primary" type="submit" [disabled]="isSavingProfile() || !displayName.trim()">
+        {{ isSavingProfile() ? 'Saving…' : 'Save changes' }}
+      </button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel__title">Password</h2>
+    <p class="panel__hint muted">
+      Your current password is required — an unattended session can't change your credentials.
+    </p>
+
+    <form class="profile__form" (ngSubmit)="changePassword()">
+      <label class="field">
+        <span class="field__label">Current password</span>
+        <input class="field__input" type="password" name="currentPassword" [(ngModel)]="currentPassword" required />
+      </label>
+
+      <label class="field">
+        <span class="field__label">New password</span>
+        <input
+          class="field__input"
+          type="password"
+          name="newPassword"
+          [ngModel]="newPassword()"
+          (ngModelChange)="newPassword.set($event)"
+          required
+        />
+      </label>
+
+      <ul class="password-checklist" aria-label="Password requirements">
+        @for (requirement of passwordRequirements(); track requirement.label) {
+          <li class="password-checklist__item" [class.password-checklist__item--met]="requirement.met">
+            <span class="password-checklist__mark" aria-hidden="true">{{ requirement.met ? '✓' : '○' }}</span>
+            {{ requirement.label }}
+          </li>
+        }
+      </ul>
+
+      @if (passwordError()) {
+        <p class="form-error">{{ passwordError() }}</p>
+      }
+
+      <button
+        class="btn btn--primary"
+        type="submit"
+        [disabled]="isSavingPassword() || !currentPassword || !isNewPasswordValid()"
+      >
+        {{ isSavingPassword() ? 'Saving…' : 'Change password' }}
+      </button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2 class="panel__title">Appearance</h2>
+    <p class="panel__hint muted">Saved in this browser, so each device can differ.</p>
+
+    <div class="theme-choice" role="group" aria-label="Theme">
+      <button
+        type="button"
+        class="theme-choice__option"
+        [class.theme-choice__option--active]="theme() === 'dark'"
+        [attr.aria-pressed]="theme() === 'dark'"
+        (click)="selectTheme('dark')"
+      >
+        Dark console
+      </button>
+      <button
+        type="button"
+        class="theme-choice__option"
+        [class.theme-choice__option--active]="theme() === 'light'"
+        [attr.aria-pressed]="theme() === 'light'"
+        (click)="selectTheme('light')"
+      >
+        Light
+      </button>
+    </div>
+  </div>
+</section>

@@ -2,10 +2,15 @@
  * Design direction: "workload console" — TaskFlow's core feature is anomaly
  * detection on team load, so the UI leans into a monitoring-console aesthetic
  * (deep, slightly purple-tinted dark surface, monospace data readouts, a live
- * violet→pink accent) rather than a generic SaaS light theme. Fixed dark theme.
+ * violet→pink accent) rather than a generic SaaS light theme.
+ *
+ * Dark is the default. A light theme is available via the header toggle, which sets
+ * data-theme="light" on <html> (see core/services/theme.service.ts) — every component
+ * styles itself from the tokens below, so the whole UI follows from this one block.
  */
 
 :root {
+  color-scheme: dark;
   /* Color — dark violet base with a violet primary and a pink secondary accent */
   --color-bg: #0f0d17;
   --color-surface: #17141f;
@@ -50,6 +55,47 @@
   --radius-sm: 4px;
   --radius-md: 8px;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 32px -10px rgba(88, 28, 135, 0.45);
+}
+
+/* Light theme — the same palette re-grounded on paper instead of on a dark console.
+ * Accent and status hues are deliberately *darker* than their dark-theme counterparts:
+ * #a855f7 on white fails contrast for text, #7c3aed passes. Only tokens are redefined here;
+ * no component needs a light-specific rule. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #f6f4fb;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f1ecfa;
+  --color-border: #ddd5ec;
+  --color-text: #1b1626;
+  --color-text-muted: #6a6283;
+
+  --color-accent: #7c3aed;
+  --color-accent-strong: #6d28d9;
+  --color-accent-dim: rgba(124, 58, 237, 0.12);
+  --color-accent-2: #db2777;
+  --color-accent-2-dim: rgba(219, 39, 119, 0.12);
+
+  --color-warning: #b45309;
+  --color-warning-dim: rgba(180, 83, 9, 0.12);
+  --color-critical: #be123c;
+  --color-critical-dim: rgba(190, 18, 60, 0.12);
+  --color-info: #4f46e5;
+  --color-info-dim: rgba(79, 70, 229, 0.12);
+  --color-success: #047857;
+  --color-success-dim: rgba(4, 120, 87, 0.12);
+
+  --state-todo: #64748b;
+  --state-todo-dim: rgba(100, 116, 139, 0.12);
+  --state-inprogress: #b45309;
+  --state-inprogress-dim: rgba(180, 83, 9, 0.12);
+  --state-blocked: #be123c;
+  --state-blocked-dim: rgba(190, 18, 60, 0.12);
+  --state-done: #047857;
+  --state-done-dim: rgba(4, 120, 87, 0.12);
+
+  --shadow-card: 0 1px 2px rgba(27, 22, 38, 0.06), 0 12px 32px -14px rgba(88, 28, 135, 0.22);
 }
 
 * {

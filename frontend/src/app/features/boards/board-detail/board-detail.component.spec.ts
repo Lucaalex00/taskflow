@@ -10,7 +10,7 @@ import { BoardService } from '../../../core/services/board.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { TaskDto, TaskPriority, TaskState } from '../../../core/models/task.model';
 import { AlertDto, AlertSeverity } from '../../../core/models/alert.model';
-import { BoardMemberDto, BoardRole } from '../../../core/models/board.model';
+import { BoardDto, BoardMemberDto, BoardRole } from '../../../core/models/board.model';
 
 describe('BoardDetailComponent', () => {
   let taskService: jasmine.SpyObj<TaskService>;
@@ -61,18 +61,17 @@ describe('BoardDetailComponent', () => {
     taskService = jasmine.createSpyObj<TaskService>('TaskService', [
       'getBoardTasks',
       'create',
+      'update',
       'transitionState',
       'assign',
       'archive'
     ]);
-    boardService = jasmine.createSpyObj<BoardService>('BoardService', [
-      'getAll',
-      'create',
-      'getMembers',
-      'inviteMember',
-      'updateMemberRole',
-      'removeMember'
-    ]);
+    boardService = jasmine.createSpyObj<BoardService>(
+      'BoardService',
+      ['getAll', 'create', 'refresh', 'getMembers', 'inviteMember', 'updateMemberRole', 'removeMember'],
+      { boards: signal<BoardDto[]>([]) }
+    );
+    boardService.refresh.and.resolveTo(undefined);
     boardService.getMembers.and.resolveTo([]);
     alertService = {
       alerts: signal<AlertDto[]>([]),
@@ -391,15 +390,15 @@ describe('BoardDetailComponent', () => {
     expect(component.assigneeColor({ ...task, assigneeId: 'unknown' })).toBeNull();
   });
 
-  it('createTask creates the task, resets the form and reloads the board', async () => {
+  it('saveTask (create mode) creates the task, resets the form and reloads the board', async () => {
     const { component } = createComponent();
     taskService.create.and.resolveTo('task-2');
     taskService.getBoardTasks.and.resolveTo([]);
+    component.openNewTask();
     component.newTaskTitle = 'Write tests';
     component.newTaskDescription = 'For the board detail component';
-    component.isTaskFormOpen.set(true);
 
-    await component.createTask();
+    await component.saveTask();
 
     expect(taskService.create).toHaveBeenCalledWith('board-1', {
       title: 'Write tests',
@@ -411,27 +410,48 @@ describe('BoardDetailComponent', () => {
     expect(component.isTaskFormOpen()).toBeFalse();
   });
 
-  it('createTask does nothing when the title is blank', async () => {
+  it('openEditTask pre-fills the form and saveTask updates the task', async () => {
     const { component } = createComponent();
+    taskService.update.and.resolveTo(undefined);
+    taskService.getBoardTasks.and.resolveTo([]);
+
+    component.openEditTask({ ...task, id: 'task-9', title: 'Old', priority: TaskPriority.Low });
+    expect(component.editingTaskId()).toBe('task-9');
+    expect(component.newTaskTitle).toBe('Old');
+    expect(component.newTaskPriority).toBe(TaskPriority.Low);
+
+    component.newTaskTitle = 'New title';
+    await component.saveTask();
+
+    expect(taskService.update).toHaveBeenCalledWith('task-9', jasmine.objectContaining({ title: 'New title' }));
+    expect(taskService.create).not.toHaveBeenCalled();
+    expect(component.editingTaskId()).toBeNull();
+    expect(component.isTaskFormOpen()).toBeFalse();
+  });
+
+  it('saveTask does nothing when the title is blank', async () => {
+    const { component } = createComponent();
+    component.openNewTask();
     component.newTaskTitle = '   ';
 
-    await component.createTask();
+    await component.saveTask();
 
     expect(taskService.create).not.toHaveBeenCalled();
   });
 
-  it('createTask rejects a due date in the past with a clear message, without calling the API', async () => {
+  it('saveTask rejects a past due date on create with a clear message, without calling the API', async () => {
     const { component } = createComponent();
+    component.openNewTask();
     component.newTaskTitle = 'Ship it';
     component.newTaskDueDate = '2000-01-01'; // firmly in the past
 
-    await component.createTask();
+    await component.saveTask();
 
     expect(taskService.create).not.toHaveBeenCalled();
     expect(component.errorMessage()).toContain('past');
   });
 
-  it('createTask surfaces the server validation message on a 400', async () => {
+  it('saveTask surfaces the server validation message on a 400', async () => {
     const { component } = createComponent();
     taskService.create.and.rejectWith(
       new HttpErrorResponse({
@@ -439,9 +459,10 @@ describe('BoardDetailComponent', () => {
         error: { errors: { DueAtUtc: ['Due date cannot be in the past.'] } }
       })
     );
+    component.openNewTask();
     component.newTaskTitle = 'Ship it';
 
-    await component.createTask();
+    await component.saveTask();
 
     expect(component.errorMessage()).toBe('Due date cannot be in the past.');
   });

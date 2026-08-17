@@ -1,5 +1,5 @@
 import { Component, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CurrentUserService } from '../../core/services/current-user.service';
 import { AvatarComponent } from '../avatar/avatar.component';
 
@@ -8,7 +8,7 @@ import { AvatarComponent } from '../avatar/avatar.component';
 @Component({
   selector: 'app-user-menu',
   standalone: true,
-  imports: [AvatarComponent],
+  imports: [AvatarComponent, RouterLink],
   templateUrl: './user-menu.component.html',
   styleUrl: './user-menu.component.scss'
 })

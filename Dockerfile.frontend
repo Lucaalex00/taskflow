@@ -14,7 +14,14 @@ RUN npm run build -- --configuration production
 # container at all, unlike the stock nginx image which starts its master process as root.
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runtime
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Dropped in /etc/nginx/templates rather than conf.d: the image's entrypoint runs envsubst
+# over templates at start-up, which is what lets the API's address be set per environment
+# instead of baked into the image (docker compose vs. a hosting platform — see
+# docs/deploying.md). The filter keeps envsubst away from nginx's own $variables.
+COPY docker/default.conf.template /etc/nginx/templates/default.conf.template
+ENV API_UPSTREAM=api:8080 \
+    NGINX_ENVSUBST_FILTER=^API_UPSTREAM$
+
 # Angular 19 build output lands under dist/frontend/browser.
 COPY --from=build /src/dist/frontend/browser /usr/share/nginx/html
 
