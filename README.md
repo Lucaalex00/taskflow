@@ -18,9 +18,13 @@ board-scoped roles, and an invitation flow. Not a CRUD demo.
 ```bash
 git clone https://github.com/Lucaalex00/taskflow.git && cd taskflow
 docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+docker compose port frontend 8080
 ```
 
-Then open **http://localhost:4200** and click **Explore the demo workspace**.
+The web app doesn't claim a fixed host port — Docker hands it whichever is free, so it never
+collides with something else already running on your machine. The second command prints where
+it landed, e.g. `0.0.0.0:4200` — open that in your browser and click **Explore the demo
+workspace**. (Want it pinned to a specific port instead? Set `WEB_PORT` in `.env`.)
 
 That's it. No build step — it pulls the images CI publishes on every green run. Measured from zero
 images on a warm Docker over a home connection: **16 seconds** to a seeded workspace with two
@@ -169,18 +173,26 @@ if you just want to see the app.
 ### Building from source
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 Same result, built locally: a few minutes the first time, seconds afterwards. Use this if
 you've changed the code.
 
 Either way there is no database step — EF Core migrations apply on API startup, and an empty
-database is seeded with a demo workspace.
+database is seeded with a demo workspace. The web app's host port isn't hardcoded: Docker picks
+whichever is free, so it never collides with another project already running on your machine.
+Find it with:
+
+```bash
+docker compose port frontend 8080
+```
+
+Or pin a specific one yourself by setting `WEB_PORT` in `.env`.
 
 | What | URL |
 |---|---|
-| Web app | http://localhost:4200 |
+| Web app | `docker compose port frontend 8080` (http://localhost:4200 unless that port was already taken) |
 | API + Swagger | http://localhost:5080/swagger |
 | Health check | http://localhost:5080/health |
 
@@ -213,7 +225,8 @@ and change what you like — Docker Compose picks it up automatically.
 
 | Variable | Default | What it does |
 |---|---|---|
-| `WEB_PORT` / `API_PORT` / `POSTGRES_PORT` | `4200` / `5080` / `5432` | Host ports. Change `POSTGRES_PORT` if you already run a local Postgres. |
+| `API_PORT` / `POSTGRES_PORT` | `5080` / `5432` | Host ports. Change `POSTGRES_PORT` if you already run a local Postgres. |
+| `WEB_PORT` | unset (Docker picks a free port) | Pin the web app to a specific host port instead of the auto-assigned one — see [Run it](#run-it). |
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | `taskflow` | Database name and credentials. |
 | `JWT_SECRET` | built-in demo key | Token signing key. The API **refuses to start** with the default when `ASPNETCORE_ENVIRONMENT=Production`. |
 | `JWT_EXPIRY_MINUTES` | `1440` | How long an issued token stays valid. |

@@ -82,7 +82,10 @@ services:
       # network; a hosting platform needs its own internal address (see docs/deploying.md).
       API_UPSTREAM: ${API_UPSTREAM:-api:8080}
     ports:
-      - "${WEB_PORT:-4200}:8080"
+      # No fixed host port: Docker picks whichever is free so this never collides with
+      # another project already listening on a hardcoded port. Find it with
+      # `docker compose port frontend 8080`, or pin one yourself with WEB_PORT in .env.
+      - "${WEB_PORT:-}:8080"
     deploy:
       resources:
         limits:

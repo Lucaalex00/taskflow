@@ -104,6 +104,14 @@ jobs:
       - name: Build & start the full stack
         run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
 
+      # The web app's host port isn't pinned in docker-compose.yml (Docker picks a free one so
+      # it never collides with another project on a dev machine) — discover whatever it landed
+      # on here and pass it to Playwright/the screenshot scripts via E2E_BASE_URL.
+      - name: Discover the web app's assigned port
+        run: |
+          WEB_PORT="$(docker compose port frontend 8080 | cut -d: -f2)"
+          echo "E2E_BASE_URL=http://localhost:$WEB_PORT" >> "$GITHUB_ENV"
+
       - name: Wait for the API to be healthy
         run: |
           for i in $(seq 1 30); do

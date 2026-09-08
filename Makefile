@@ -10,13 +10,13 @@ help: ## Show this help
 env: ## Create a .env from .env.example (does nothing if .env already exists)
 	@test -f .env || (cp .env.example .env && echo "Created .env — edit it to taste.")
 
-up: ## Build and start the full stack (http://localhost:4200)
+up: ## Build and start the full stack
 	docker compose up --build -d
-	@echo "Web http://localhost:4200 · API http://localhost:5080/swagger"
+	@echo "Web http://localhost:$$(docker compose port frontend 8080 | cut -d: -f2) · API http://localhost:5080/swagger"
 
 demo: ## Start the stack from CI-published images — no local build
 	docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
-	@echo "Web http://localhost:4200 · sign in as demo@taskflow.dev"
+	@echo "Web http://localhost:$$(docker compose port frontend 8080 | cut -d: -f2) · sign in as demo@taskflow.dev"
 
 down: ## Stop the stack (keeps the database volume)
 	docker compose down
@@ -41,10 +41,12 @@ test-frontend: ## Karma/Jasmine tests, headless
 
 test-e2e: ## Playwright tests against the real Docker stack
 	docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build -d
-	cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
+	export E2E_BASE_URL=http://localhost:$$(docker compose port frontend 8080 | cut -d: -f2); \
+		cd e2e && npm ci && npx playwright install --with-deps chromium && npx playwright test
 
 media: ## Regenerate the README screenshots and demo GIF (needs the seeded stack running)
-	cd e2e && node capture-screenshots.mjs && node capture-demo-frames.mjs && python build-demo-gif.py
+	export E2E_BASE_URL=http://localhost:$$(docker compose port frontend 8080 | cut -d: -f2); \
+		cd e2e && node capture-screenshots.mjs && node capture-demo-frames.mjs && python build-demo-gif.py
 
 lint: ## Angular lint
 	cd frontend && npx ng lint
