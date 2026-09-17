@@ -12,7 +12,12 @@
 </button>
 
 @if (isOpen()) {
+  <!-- Backdrop dismiss is mouse/touch-only by design — Escape (see onEscape() in the
+       component) is the keyboard equivalent, so the backdrop itself doesn't need to be
+       a focusable, keyboard-operable control. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
   <div class="docs-overlay" (click)="close()">
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
     <aside class="docs-panel" role="dialog" aria-modal="true" aria-labelledby="docs-panel-title" (click)="$event.stopPropagation()">
       <header class="docs-panel__header">
         <h2 id="docs-panel-title">How this is built</h2>
