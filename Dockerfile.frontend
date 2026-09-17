@@ -6,6 +6,12 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ .
+# The in-app docs panel (shared/docs-panel) fetches these as static assets rather than through
+# a backend endpoint — scripts/copy-docs.js does the same copy (and renaming) for local dev, but
+# here the build context is the repo root while WORKDIR only has frontend/'s own contents, so
+# it's spelled out. Lowercased to match what the panel component requests.
+COPY README.md ./public/docs/readme.md
+COPY OVERVIEW.md ./public/docs/overview.md
 RUN npm run build -- --configuration production
 
 # --- Runtime stage -----------------------------------------------------------

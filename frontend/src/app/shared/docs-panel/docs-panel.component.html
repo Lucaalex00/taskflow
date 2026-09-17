@@ -1,0 +1,52 @@
+<button
+  class="docs-toggle"
+  type="button"
+  (click)="open()"
+  title="Project documentation"
+  aria-label="Project documentation"
+>
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+    <path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke-linejoin="round" />
+    <path d="M9 12h6M9 15.5h4" stroke-linecap="round" />
+  </svg>
+</button>
+
+@if (isOpen()) {
+  <div class="docs-overlay" (click)="close()">
+    <aside class="docs-panel" role="dialog" aria-modal="true" aria-labelledby="docs-panel-title" (click)="$event.stopPropagation()">
+      <header class="docs-panel__header">
+        <h2 id="docs-panel-title">How this is built</h2>
+        <button type="button" class="docs-panel__close" (click)="close()" aria-label="Close">✕</button>
+      </header>
+
+      <nav class="docs-panel__tabs">
+        @for (tab of tabs; track tab.id) {
+          <button
+            type="button"
+            class="docs-panel__tab"
+            [class.docs-panel__tab--active]="activeTabId() === tab.id"
+            (click)="selectTab(tab.id)"
+          >
+            {{ tab.label }}
+          </button>
+        }
+      </nav>
+
+      <div class="docs-panel__body">
+        @if (isLoading()) {
+          <div class="docs-panel__skeleton" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        } @else if (errorMessage()) {
+          <p class="docs-panel__error">{{ errorMessage() }}</p>
+        } @else if (content()) {
+          <div class="docs-panel__markdown" [innerHTML]="content()"></div>
+        }
+      </div>
+
+      <footer class="docs-panel__footer">
+        <a [href]="repoUrl" target="_blank" rel="noopener noreferrer">View the source on GitHub</a>
+      </footer>
+    </aside>
+  </div>
+}

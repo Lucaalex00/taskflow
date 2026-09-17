@@ -5,6 +5,7 @@ import { NotificationBellComponent } from './features/notifications/notification
 import { UserMenuComponent } from './shared/user-menu/user-menu.component';
 import { ThemeToggleComponent } from './shared/theme-toggle/theme-toggle.component';
 import { ToastContainerComponent } from './shared/toast/toast-container.component';
+import { DocsPanelComponent } from './shared/docs-panel/docs-panel.component';
 
 @Component({
   selector: 'app-root',
@@ -14,7 +15,8 @@ import { ToastContainerComponent } from './shared/toast/toast-container.componen
     NotificationBellComponent,
     UserMenuComponent,
     ThemeToggleComponent,
-    ToastContainerComponent
+    ToastContainerComponent,
+    DocsPanelComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
