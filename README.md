@@ -11,6 +11,15 @@ in it.** A background worker snapshots every board on a timer, evaluates configu
 rules, and pushes alerts to the browser over a WebSocket — on top of real authentication,
 board-scoped roles, and an invitation flow. Not a CRUD demo.
 
+## Overview
+
+- **Backend:** .NET 10, ASP.NET Core, EF Core 9, PostgreSQL, MediatR (CQRS), SignalR
+- **Frontend:** Angular 19, standalone components, signals
+- **Proof points:** Clean Architecture, a real background worker with a pluggable rule engine,
+  JWT auth enforced down to the WebSocket hub, and 362 tests — 51 of them full HTTP round-trips
+  against a real Postgres container, not mocks
+- **Run it:** one Docker command, nothing to install — see [Run it](#run-it)
+
 ## Run it
 
 **Docker is the only requirement.** Nothing to install, nothing to configure, no account to create.
@@ -94,19 +103,11 @@ the test suite to back every one of them up.
   condition doesn't re-alert every cycle.
 
 **Real authentication & authorization**
-- Password registration/login with PBKDF2-HMAC-SHA256 hashing and JWT bearer tokens —
-  every endpoint requires authentication, including the SignalR hub itself.
-- Login/register are rate-limited per IP against brute-force/credential-stuffing attempts, and
-  a single account locks temporarily after repeated failures (defends against an attacker
-  rotating IPs, which per-IP limiting alone wouldn't stop).
-- A real password policy (length + upper/lower/number), enforced server-side and mirrored by a
-  live requirements checklist in the registration form.
-- Defensive HTTP headers on every response (strict CSP, HSTS, X-Frame-Options,
-  X-Content-Type-Options, Referrer-Policy) on both the API and the nginx-served frontend.
-- Board-scoped **Owner / Member** roles, enforced consistently through a single
-  `IBoardAuthorizer` abstraction: only Owners create tasks, assign them, manage membership,
-  and configure alert rules; Members can still move their own assigned tasks through the
-  state machine.
+- Email/password registration and login, JWT-protected throughout — see [Security](#security)
+  for the hardening details (hashing, rate limiting, headers, image scanning).
+- Board-scoped **Owner / Member** roles: only Owners create tasks, assign them, manage
+  membership, and configure alert rules; Members move their own assigned tasks through the
+  state machine but never assign work to themselves or each other.
 
 **Invitations & notifications**
 - Owners invite teammates by **email** — invites to not-yet-registered addresses stay
@@ -348,6 +349,32 @@ flowchart TB
 | `Infrastructure` | EF Core, JWT issuance, password hashing, the `LoadMonitorWorker` background service, alert rule evaluators, SignalR |
 | `Api` | Controllers, JWT bearer middleware, exception-to-`ProblemDetails` middleware, composition root (`Program.cs`) |
 
+## Key technical decisions
+
+| Decision | Why |
+|---|---|
+| PostgreSQL, not SQL Server/SQLite | [ADR 0001](docs/adr/0001-postgresql.md) — free, container-native, and the same engine Testcontainers spins up for integration tests |
+| Clean Architecture + CQRS | [ADR 0002](docs/adr/0002-clean-architecture-cqrs.md) — business rules live in the domain, not controllers; MediatR keeps each handler doing exactly one thing |
+| SignalR over polling | [ADR 0003](docs/adr/0003-signalr-realtime-alerts.md) — alerts reach the browser the moment the worker raises them, not on the next poll |
+| Strategy pattern for alert rules | [ADR 0004](docs/adr/0004-alert-rule-strategy-pattern.md) — a new anomaly rule is a new class; the worker itself never changes |
+
+## Security
+
+- JWT bearer auth required on every endpoint, including the SignalR hub — no route is
+  anonymous by accident.
+- Passwords hashed with PBKDF2-HMAC-SHA256; a real policy (length + upper/lower/number) is
+  enforced server-side and mirrored live in the registration form.
+- Per-IP rate limiting on login/register, plus a per-account lockout after repeated failures —
+  the lockout is what stops an attacker who simply rotates IPs.
+- Defensive HTTP headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+  on every response, from both the API and the nginx-served frontend.
+- All board-level authorization funnels through one `IBoardAuthorizer` chokepoint — a single
+  place to audit the Owner/Member boundary, not one ad-hoc check per endpoint.
+- Published Docker images are scanned for HIGH/CRITICAL CVEs on every build — see
+  [CI/CD](#cicd).
+- `JWT_SECRET` ships with a well-known demo value that the API **refuses to boot with** once
+  `ASPNETCORE_ENVIRONMENT=Production` — see [Configuration](#configuration).
+
 ## Tech stack
 
 See [`OVERVIEW.md`](OVERVIEW.md) for the full breakdown of every library and module.
@@ -391,6 +418,20 @@ at once and Docker starves on smaller machines.
 | Frontend | 137 | Services (HTTP contracts, theme, instance config, toasts), components (behavior via mocked services, incl. profile, avatars, filters, user menu), interceptors, guards |
 | End-to-end | 8 | Playwright driving real Chromium browsers against the actual Docker stack: auth, board creation, drag & drop, the close→confirm→archive→show-completed flow, and the full owner/member invite → accept → assign → move-task workflow across two simultaneous identities |
 
+## CI/CD
+
+GitHub Actions runs on every push to `main` and every pull request
+([`ci.yml`](.github/workflows/ci.yml)):
+
+1. **Backend** and **Frontend** jobs run in parallel — build, unit tests, .NET integration tests
+   against a real Postgres service container, Angular lint, headless unit tests, production build.
+2. **End-to-end** (Playwright, against the real Docker stack) runs only once both of the above pass.
+3. **Build & push** — only on a successful push to `main`: both images are built, pushed to GHCR
+   (`ghcr.io/lucaalex00/taskflow/{api,frontend}`), and scanned for HIGH/CRITICAL CVEs with Trivy.
+
+A red pipeline blocks the publish step, so the images the [prebuilt demo command](#run-it) pulls
+are never behind a failing build.
+
 ## Project structure
 
 ```
@@ -419,11 +460,7 @@ Makefile               shortcuts for everything above
 - [`OVERVIEW.md`](OVERVIEW.md) — every library, module, and command in detail
 - [`docs/deploying.md`](docs/deploying.md) — putting a public demo online: topology, the
   environment variables that matter, and the free-tier gotchas worth knowing first
-- Architecture Decision Records:
-  [0001 — PostgreSQL](docs/adr/0001-postgresql.md) ·
-  [0002 — Clean Architecture + CQRS](docs/adr/0002-clean-architecture-cqrs.md) ·
-  [0003 — SignalR for real-time alerts](docs/adr/0003-signalr-realtime-alerts.md) ·
-  [0004 — Strategy pattern for alert rules](docs/adr/0004-alert-rule-strategy-pattern.md)
+- Architecture Decision Records — see [Key technical decisions](#key-technical-decisions) above
 - [`docs/2026-08-17-self-refreshing-demo-and-deployability.md`](docs/2026-08-17-self-refreshing-demo-and-deployability.md)
   — the most recent entry: the scheduled demo reset, a configurable nginx upstream, and the
   README animation
