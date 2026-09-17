@@ -15,14 +15,16 @@ server {
 
     # Defensive headers on every response. The CSP is scoped to what the Angular app actually
     # loads: same-origin scripts/XHR/WebSocket, Google Fonts (the only third-party origin),
-    # and inline styles (Angular's component styles land in the main stylesheet, but this stays
-    # permissive enough not to fight the framework over it).
+    # inline styles (Angular's component styles land in the main stylesheet, but this stays
+    # permissive enough not to fight the framework over it), and the two GitHub image hosts the
+    # in-app docs panel's rendered README points at (shields.io badges, raw.githubusercontent.com
+    # screenshots — see shared/docs-panel).
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://img.shields.io https://raw.githubusercontent.com https://github.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
     # Angular client-side routing: any unknown path falls back to index.html.
     location / {

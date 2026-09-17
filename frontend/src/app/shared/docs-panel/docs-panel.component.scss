@@ -26,13 +26,17 @@
 }
 
 .docs-panel {
-  width: min(480px, 100vw);
+  width: min(760px, 100vw);
   height: 100%;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
+  /* Without this, a flex child's min-height defaults to the size of its content instead of 0,
+   * so `.docs-panel__body`'s `flex: 1; overflow-y: auto` never actually kicks in — the panel
+   * itself grows past the viewport and everything past the fold is simply unreachable. */
+  min-height: 0;
 }
 
 .docs-panel__header {
@@ -89,6 +93,7 @@
 
 .docs-panel__body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px;
